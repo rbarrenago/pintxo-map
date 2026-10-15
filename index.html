@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Pintxo Map: an AI demo that proposes a diverse map of pintxos and learns a tasting panel's taste. IES Xabier Zubiri-Manteo and GOe Tech Center.">
+<title>Pintxo Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a working bench. The map of candidate pintxos on the left, the taste-off and what the model has learned on the right, the shortlist underneath. */
+:root {
+  --bg: #f6f7f4;
+  --surface: #ffffff;
+  --ink: #1c2320;
+  --muted: #5d6862;
+  --line: #d9ded8;
+  --accent: #4c6b1f;        /* piparra green */
+  --accent-ink: #ffffff;
+  --neg: #9a4a2f;           /* negative weights */
+  --scrim: rgba(18, 26, 22, 0.55);
+  --font-display: "Young Serif", Georgia, serif;
+  --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121614; --surface: #1a201d; --ink: #e3e8e4; --muted: #9aa59f; --line: #2e3833;
+    --accent: #a3c75f; --accent-ink: #121614; --neg: #e08a6a; --scrim: rgba(0, 0, 0, 0.62); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121614; --surface: #1a201d; --ink: #e3e8e4; --muted: #9aa59f; --line: #2e3833;
+  --accent: #a3c75f; --accent-ink: #121614; --neg: #e08a6a; --scrim: rgba(0, 0, 0, 0.62); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 22px 40px;
+}
+.wrap { max-width: 1200px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: grid; gap: 4px; }
+.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; }
+h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 5vw, 44px); line-height: 1.05; margin: 0; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); max-width: 70ch; font-size: 16px; }
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 21px; margin: 0; }
+.eyebrow { font: 600 12px var(--font-body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0; }
+button { font: inherit; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.langs { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.langs button { border: 0; background: none; color: var(--muted); padding: 5px 11px; cursor: pointer; font: 600 13px var(--font-body); letter-spacing: 0.04em; }
+.langs button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+
+.bench { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+
+.maphead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; }
+.legend { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.ramp { width: 90px; height: 10px; border-radius: 5px; background: linear-gradient(90deg, color-mix(in oklab, var(--accent) 6%, var(--surface)), var(--accent)); border: 1px solid var(--line); }
+.mapframe { display: grid; grid-template-columns: 22px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 6px; }
+.yaxis { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; text-align: center; }
+.xaxis { grid-column: 2; display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.cell { min-height: 74px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 7px; text-align: left; cursor: pointer; color: var(--ink); display: flex; flex-direction: column; justify-content: space-between; gap: 4px; font-size: 12.5px; line-height: 1.25; transition: background-color 0.4s; }
+.cell.dark { color: var(--accent-ink); }
+.cell .n { font-weight: 500; overflow-wrap: anywhere; }
+.cell .tag { font: 500 10.5px var(--font-data); opacity: 0.8; }
+.cell.empty { background: none; border-style: dashed; cursor: default; color: var(--muted); align-items: center; justify-content: center; }
+.cell.sel { outline: 2px solid var(--ink); outline-offset: 1px; }
+.cell.inpair { box-shadow: inset 0 0 0 2px var(--ink); }
+@media (max-width: 600px) { .cell { min-height: 46px; } .cell .n { display: none; } }
+
+.dish { display: grid; gap: 6px; }
+.dish h3 { font-family: var(--font-display); font-weight: 400; font-size: 19px; margin: 0; text-wrap: balance; }
+.parts { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.parts li { font-size: 12.5px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; color: var(--muted); }
+.why { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 2px; }
+.meta { font: 12.5px var(--font-data); color: var(--muted); }
+
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 420px) { .pair { grid-template-columns: 1fr; } }
+.cand { border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: grid; gap: 8px; align-content: space-between; }
+.cand .who { font: 600 12px var(--font-body); letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
+.cand .nm { font-family: var(--font-display); font-size: 15.5px; line-height: 1.25; }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: 7px; padding: 7px 12px; cursor: pointer; font-weight: 600; }
+.btn.ghost { background: none; color: var(--ink); border-color: var(--line); font-weight: 500; }
+.btn:hover { filter: brightness(1.06); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.small { font-size: 13px; color: var(--muted); margin: 0; }
+
+.bars { display: grid; gap: 7px; }
+.bar { display: grid; grid-template-columns: 104px minmax(0, 1fr) 46px; gap: 8px; align-items: center; font-size: 13px; }
+.track { position: relative; height: 14px; background: color-mix(in oklab, var(--line) 45%, var(--surface)); border-radius: 3px; }
+.track::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--muted); opacity: 0.6; }
+.fill { position: absolute; top: 2px; bottom: 2px; border-radius: 2px; background: var(--accent); transition: all 0.4s; }
+.fill.neg { background: var(--neg); }
+.truth { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1.5px; background: var(--ink); border-radius: 2px; }
+.val { font: 12px var(--font-data); text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stat { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+.stat b { font: 500 14px var(--font-data); font-variant-numeric: tabular-nums; }
+label.tg { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); cursor: pointer; }
+
+.short { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.pick { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 4px; background: var(--surface); }
+.pick .where { font: 500 11px var(--font-data); color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.pick .nm { font-family: var(--font-display); font-size: 15.5px; line-height: 1.25; }
+.note { font-size: 13.5px; color: var(--muted); margin: 0; max-width: 90ch; }
+@media (prefers-reduced-motion: reduce) { .cell, .fill { transition: none; } }
+
+/* guided tour */
+.welcome { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; background: color-mix(in oklab, var(--accent) 10%, var(--surface)); border: 1px solid color-mix(in oklab, var(--accent) 35%, var(--line)); border-radius: 10px; padding: 12px 16px; }
+.welcome p { margin: 0; font-size: 15px; }
+.welcome b { font-weight: 600; }
+#tour .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 40; }
+#tour .spot { position: fixed; z-index: 41; border-radius: 10px; box-shadow: 0 0 0 9999px var(--scrim), 0 0 0 3px var(--accent); pointer-events: none; transition: all 0.25s; }
+#tour .tcard { position: fixed; z-index: 42; width: min(380px, calc(100vw - 32px)); background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; box-shadow: 0 12px 32px rgba(0,0,0,0.18); }
+#tour .tcard h3 { font-family: var(--font-display); font-weight: 400; font-size: 20px; margin: 0; }
+#tour .tcard p { margin: 0; font-size: 14.5px; }
+#tour .tstep { font: 500 12px var(--font-data); color: var(--muted); }
+#tour ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14.5px; }
+#tour .trow { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+#tour .trow .sp { flex: 1; }
+#tour .trow .btn { white-space: nowrap; padding: 7px 10px; }
+#tour .dots { display: flex; gap: 4px; }
+#tour .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+#tour .dots i.on { background: var(--accent); }
+@media (max-width: 640px) { #tour .tcard { left: 16px !important; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important; top: auto !important; width: auto; } }
+@media (prefers-reduced-motion: reduce) { #tour .spot { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="top">
+      <p class="eyebrow" data-i="eyebrow">Demo for GOe Tech Center · IES Xabier Zubiri-Manteo</p>
+      <div class="row">
+      <button type="button" class="btn ghost" id="guideBtn" data-i="guideBtn"></button>
+      <div class="langs" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="es" aria-pressed="false">ES</button>
+        <button type="button" data-lang="eu" aria-pressed="false">EU</button>
+      </div>
+      </div>
+    </div>
+    <h1 data-i="h1">Pintxo Map</h1>
+    <p class="lede" data-i="lede"></p>
+  </header>
+
+  <div class="welcome" id="welcome">
+    <p data-ih="welcome"></p>
+    <div class="row">
+      <button type="button" class="btn" id="startTour" data-i="startTour"></button>
+      <button type="button" class="btn ghost" id="hideWelcome" data-i="hideWelcome"></button>
+    </div>
+  </div>
+
+  <div class="bench">
+    <section class="card" aria-labelledby="maptitle">
+      <div class="maphead">
+        <h2 id="maptitle" data-i="mapTitle"></h2>
+        <span class="legend"><span data-i="legend"></span> <span class="ramp" aria-hidden="true"></span></span>
+      </div>
+      <div class="mapframe">
+        <div class="yaxis" aria-hidden="true"><span data-i="yLight"></span><span data-i="yRich"></span></div>
+        <div class="grid" id="grid" role="grid"></div>
+        <div class="xaxis" aria-hidden="true"><span data-i="xClassic"></span><span data-i="xNovel"></span></div>
+      </div>
+      <div class="dish" id="dish" aria-live="polite"></div>
+    </section>
+
+    <div style="display:grid; gap:20px; min-width:0">
+      <section class="card" aria-labelledby="totitle">
+        <div class="row" style="justify-content:space-between">
+          <h2 id="totitle" data-i="tasteoff"></h2>
+          <span class="meta" id="roundinfo"></span>
+        </div>
+        <p class="small" data-i="toLead"></p>
+        <div class="pair" id="pair"></div>
+        <div class="row">
+          <button class="btn ghost" id="skip" data-i="skip"></button>
+          <button class="btn" id="simround" data-i="sim"></button>
+          <button class="btn ghost" id="reset" data-i="reset"></button>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="lrtitle">
+        <div class="row" style="justify-content:space-between">
+          <h2 id="lrtitle" data-i="learned"></h2>
+          <label class="tg"><input type="checkbox" id="showtruth"> <span data-i="showTruth"></span></label>
+        </div>
+        <div class="bars" id="bars"></div>
+        <div class="stat"><span data-i="agree"></span><b id="agree">–</b></div>
+        <p class="small" data-i="agreeNote"></p>
+      </section>
+    </div>
+  </div>
+
+  <section class="card" aria-labelledby="shtitle">
+    <h2 id="shtitle" data-i="shortlist"></h2>
+    <p class="small" data-i="shortNote"></p>
+    <div class="short" id="short"></div>
+  </section>
+
+  <p class="note" data-ih="note"></p>
+</div>
+
+<div id="tour" hidden>
+  <div class="scrim" id="tScrim"></div>
+  <div class="spot" id="tSpot"></div>
+  <div class="tcard" id="tCard" role="dialog" aria-modal="false" aria-labelledby="tTitle" tabindex="-1">
+    <p class="tstep" id="tStep"></p>
+    <h3 id="tTitle"></h3>
+    <p id="tText"></p>
+    <ul id="tList"></ul>
+    <div class="trow">
+      <div class="dots" id="tDots" aria-hidden="true"></div>
+      <span class="sp"></span>
+      <button type="button" class="btn ghost" id="tSkip"></button>
+      <button type="button" class="btn ghost" id="tBack"></button>
+      <button type="button" class="btn" id="tNext"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- interface text ----------
+const UI = {
+  en: {
+    guideBtn: "Guide for chefs", startTour: "Start the guide", hideWelcome: "Not now",
+    welcome: "<b>New here?</b> A three-minute guide shows what you do on this page and what you will do in the real tasting pilot.",
+    tour: { step: (n, t) => `Step ${n} of ${t}`, next: "Next", back: "Back", skip: "Skip guide", done: "Start exploring", steps: [
+      { t: "Welcome, chef", x: "This short guide shows what you do in Pintxo Map. The AI proposes and learns; you decide what is worth cooking. It takes about three minutes." },
+      { sel: "map", t: "The map of candidates", x: "Each square holds the best candidate the AI found for one style of pintxo: left to right goes from classic to novel, bottom to top from light to rich. The darker the green, the more the model expects the panel to like it." },
+      { sel: "dish", t: "Open any pintxo", x: "Click a square to see its ingredients, why it might work and how confident the model is. In the real pilot, this is where you veto anything you would not put on a plate." },
+      { sel: "pair", t: "The taste-off", x: "Two pintxos, side by side. Choose the one you would rather eat, as in a blind pairwise tasting. If you cannot choose, press \u201cToo close to call\u201d. In the pilot, the panel tastes the real dishes and the votes are recorded here." },
+      { sel: "learn", t: "Watch the model learn", x: "After every vote, the model updates its picture of the panel's taste. Green bars are qualities the panel seems to like; red ones, qualities it seems to avoid. Nothing here is fixed in advance." },
+      { sel: "sim", t: "Try it without cooking", x: "Press \u201cSimulated tasting round\u201d to let a panel with a hidden taste vote four times. Then tick \u201cShow the simulated panel's real taste\u201d to see how close the model gets. Agreement usually passes 0.8 within four rounds." },
+      { sel: "short", t: "A varied shortlist", x: "For the final tasting, the AI picks the best candidate from each quarter of the map, so the shortlist keeps classic and novel, light and rich." },
+      { t: "Your role in the pilot", x: "What we will ask of the chefs:", list: ["Before: choose the theme, the allowed ingredients and techniques, and the two dimensions of the map.", "Each round: approve 6 to 8 candidates, cook them, and taste them in pairs.", "At the end: judge the final shortlist and tell us what you think of the process.", "Nothing is cooked without a chef's approval."] },
+    ] },
+    eyebrow: "Demo for GOe Tech Center · IES Xabier Zubiri-Manteo", h1: "Pintxo Map",
+    lede: "The AI lays out a map of possible pintxos, from classic to novel and from light to rich, keeping the best candidate in each region. A tasting panel compares pairs, and the model learns the panel's taste and picks the next most informative pair.",
+    mapTitle: "Map of candidates", legend: "Predicted appeal", yLight: "Light, fresh", yRich: "Rich", xClassic: "Classic", xNovel: "Novel",
+    tasteoff: "Taste-off", toLead: "You are the panel: which would you rather eat? Or let a simulated panel with a hidden taste run tasting rounds.",
+    skip: "Too close to call", sim: "Simulated tasting round", reset: "Start over",
+    learned: "What the model has learned", showTruth: "Show the simulated panel's real taste", agree: "Agreement with the simulated panel",
+    agreeNote: "Agreement is the rank correlation between the model's predictions and the simulated panel's true preferences across the map. Votes you cast yourself teach the model your own taste instead.",
+    shortlist: "Shortlist across the map", shortNote: "The best predicted candidate from each quarter of the map, so the final tasting keeps its variety.",
+    note: "<strong>About this demo.</strong> Ingredients, their flavour scores and the balance rules are illustrative stand-ins for the knowledge GOe Tech Center's chefs would provide. In the real system the chefs approve every ingredient and technique, validate every candidate before it is cooked, and design the tasting protocol.",
+    gridLabel: "Map of candidate pintxos", empty: "No candidate here", pintxo: "Pintxo", prefer: x => `Prefer ${x}`,
+    comps: n => `${n} comparison${n === 1 ? "" : "s"}`, meta: (b, c) => `Balance score ${b} · model confidence: ${c}`,
+    conf: ["no tasting data yet", "high", "medium", "low"], raw: "raw / cured", truthTip: "Simulated panel's real taste",
+    quads: ["Classic and light", "Classic and rich", "Novel and light", "Novel and rich"],
+    feats: ["Balance", "Novelty", "Richness", "Acidity", "Crunch", "Umami", "Freshness", "Sweetness", "Heat"],
+    why: {
+      acid: (ac, m) => `Acidity from the ${ac} cuts the richness of the ${m}.`,
+      crunch: src => `Crunch from the ${src} contrasts with a softer main.`,
+      umami: (m, smoked) => `Plenty of umami: ${m}${smoked ? " and smoke" : ""}.`,
+      fresh: "Fresh and light; good early in a tasting.", gilda: "A close relative of the Gilda, the classic Donostia pintxo.",
+      heavy: "On the heavy side; keep the portion small.", none: "A simple combination with few contrasts.",
+    },
+  },
+  es: {
+    guideBtn: "Guía para cocineros", startTour: "Empezar la guía", hideWelcome: "Ahora no",
+    welcome: "<b>¿Primera vez aquí?</b> Una guía de tres minutos muestra qué haces en esta página y qué harás en el piloto de cata real.",
+    tour: { step: (n, t) => `Paso ${n} de ${t}`, next: "Siguiente", back: "Atrás", skip: "Saltar la guía", done: "Empezar a explorar", steps: [
+      { t: "Te damos la bienvenida", x: "Esta breve guía muestra qué haces en el Mapa de pintxos. La IA propone y aprende; tú decides qué merece cocinarse. Lleva unos tres minutos." },
+      { sel: "map", t: "El mapa de candidatos", x: "Cada casilla contiene el mejor candidato que ha encontrado la IA para un estilo de pintxo: de izquierda a derecha, de clásico a novedoso; de abajo arriba, de ligero a contundente. Cuanto más intenso es el verde, más espera el modelo que guste al panel." },
+      { sel: "dish", t: "Abre cualquier pintxo", x: "Pulsa una casilla para ver sus ingredientes, por qué podría funcionar y cuánta confianza tiene el modelo. En el piloto real, aquí es donde vetas lo que nunca pondrías en un plato." },
+      { sel: "pair", t: "El duelo de cata", x: "Dos pintxos, uno junto a otro. Elige el que preferirías comer, como en una cata comparativa a ciegas. Si no puedes decidir, pulsa \u00abEmpate\u00bb. En el piloto, el panel cata los platos reales y aquí se registran los votos." },
+      { sel: "learn", t: "Mira cómo aprende el modelo", x: "Tras cada voto, el modelo actualiza su idea del gusto del panel. Las barras verdes son cualidades que parecen gustar al panel; las rojas, las que parece evitar. Nada está fijado de antemano." },
+      { sel: "sim", t: "Pruébalo sin cocinar", x: "Pulsa \u00abRonda de cata simulada\u00bb para que vote cuatro veces un panel con un gusto oculto. Después marca \u00abMostrar el gusto real del panel simulado\u00bb para ver cuánto se acerca el modelo. El acuerdo suele superar 0,8 en cuatro rondas." },
+      { sel: "short", t: "Una selección variada", x: "Para la cata final, la IA elige el mejor candidato de cada cuarto del mapa, de modo que la selección conserva lo clásico y lo novedoso, lo ligero y lo contundente." },
+      { t: "Tu papel en el piloto", x: "Lo que pediremos a los cocineros:", list: ["Antes: elegir el tema, los ingredientes y técnicas permitidos y las dos dimensiones del mapa.", "En cada ronda: aprobar de 6 a 8 candidatos, cocinarlos y catarlos por parejas.", "Al final: valorar la selección final y contarnos qué te parece el proceso.", "Nada se cocina sin la aprobación de un cocinero."] },
+    ] },
+    eyebrow: "Demo para GOe Tech Center · IES Xabier Zubiri-Manteo", h1: "Mapa de pintxos",
+    lede: "La IA dibuja un mapa de pintxos posibles, de clásico a novedoso y de ligero a contundente, y conserva el mejor candidato de cada región. Un panel de cata compara parejas, y el modelo aprende el gusto del panel y elige la siguiente pareja más informativa.",
+    mapTitle: "Mapa de candidatos", legend: "Atractivo previsto", yLight: "Ligero, fresco", yRich: "Contundente", xClassic: "Clásico", xNovel: "Novedoso",
+    tasteoff: "Duelo de cata", toLead: "Tú eres el panel: ¿cuál prefieres comer? O deja que un panel simulado, con un gusto oculto, haga rondas de cata.",
+    skip: "Empate", sim: "Ronda de cata simulada", reset: "Empezar de nuevo",
+    learned: "Lo que ha aprendido el modelo", showTruth: "Mostrar el gusto real del panel simulado", agree: "Acuerdo con el panel simulado",
+    agreeNote: "El acuerdo es la correlación de rangos entre las predicciones del modelo y las preferencias reales del panel simulado en todo el mapa. Si votas tú, el modelo aprende tu propio gusto.",
+    shortlist: "Selección por todo el mapa", shortNote: "El mejor candidato previsto de cada cuarto del mapa, para que la cata final conserve su variedad.",
+    note: "<strong>Sobre esta demo.</strong> Los ingredientes, sus puntuaciones de sabor y las reglas de equilibrio son ilustrativos y sustituyen al conocimiento que aportarían los cocineros de GOe Tech Center. En el sistema real, los cocineros aprueban cada ingrediente y técnica, validan cada candidato antes de cocinarlo y diseñan el protocolo de cata.",
+    gridLabel: "Mapa de pintxos candidatos", empty: "Sin candidato", pintxo: "Pintxo", prefer: x => `Prefiero ${x}`,
+    comps: n => `${n} ${n === 1 ? "comparación" : "comparaciones"}`, meta: (b, c) => `Equilibrio ${b} · confianza del modelo: ${c}`,
+    conf: ["sin datos de cata todavía", "alta", "media", "baja"], raw: "crudo o curado", truthTip: "Gusto real del panel simulado",
+    quads: ["Clásico y ligero", "Clásico y contundente", "Novedoso y ligero", "Novedoso y contundente"],
+    feats: ["Equilibrio", "Novedad", "Contundencia", "Acidez", "Crujiente", "Umami", "Frescor", "Dulzor", "Picante"],
+    why: {
+      acid: (ac, m) => `La acidez del acompañamiento (${ac}) corta la contundencia del principal (${m}).`,
+      crunch: src => `El crujiente (${src}) contrasta con un principal más tierno.`,
+      umami: (m, smoked) => `Mucho umami: ${m}${smoked ? " y el ahumado" : ""}.`,
+      fresh: "Fresco y ligero; ideal al principio de una cata.", gilda: "Pariente cercano de la Gilda, el pintxo clásico de Donostia.",
+      heavy: "Algo contundente; mejor en ración pequeña.", none: "Combinación sencilla, con pocos contrastes.",
+    },
+  },
+  eu: {
+    guideBtn: "Sukaldarientzako gida", startTour: "Hasi gida", hideWelcome: "Orain ez",
+    welcome: "<b>Lehen aldia hemen?</b> Hiru minutuko gida batek erakusten du zer egiten duzun orri honetan eta zer egingo duzun benetako dastaketa-pilotuan.",
+    tour: { step: (n, t) => `${n}/${t} urratsa`, next: "Hurrengoa", back: "Atzera", skip: "Saltatu gida", done: "Hasi esploratzen", steps: [
+      { t: "Ongi etorri", x: "Gida labur honek erakusten du zer egiten duzun Pintxoen mapan. AAk proposatu eta ikasi egiten du; zuk erabakitzen duzu zer merezi duen sukaldatzea. Hiru minutu inguru behar dira." },
+      { sel: "map", t: "Hautagaien mapa", x: "Lauki bakoitzean AAk pintxo-estilo baterako aurkitu duen hautagairik onena dago: ezkerretik eskuinera, klasikotik berritzailera; behetik gora, arinetik astunera. Zenbat eta berde biziagoa, orduan eta gehiago espero du ereduak panelari gustatzea." },
+      { sel: "dish", t: "Ireki edozein pintxo", x: "Sakatu lauki bat haren osagaiak, zergatik funtziona dezakeen eta ereduak zenbateko konfiantza duen ikusteko. Benetako pilotuan, hemen baztertzen duzu inoiz platerean jarriko ez zenukeena." },
+      { sel: "pair", t: "Dastaketa-lehia", x: "Bi pintxo, bata bestearen ondoan. Aukeratu nahiago zenukeena jan, itsuan egindako dastaketa konparatibo batean bezala. Erabaki ezin baduzu, sakatu \u00abBerdinketa\u00bb. Pilotuan, panelak benetako platerak dastatzen ditu eta botoak hemen erregistratzen dira." },
+      { sel: "learn", t: "Ikusi nola ikasten duen ereduak", x: "Boto bakoitzaren ondoren, ereduak panelaren gustuari buruzko irudia eguneratzen du. Barra berdeak panelari gustatzen zaizkion ezaugarriak dira; gorriak, saihesten dituenak. Ezer ez dago aldez aurretik finkatuta." },
+      { sel: "sim", t: "Probatu sukaldatu gabe", x: "Sakatu \u00abDastaketa-txanda simulatua\u00bb, gustu ezkutua duen panel batek lau aldiz boza dezan. Ondoren, markatu \u00abErakutsi panel simulatuaren benetako gustua\u00bb, ereduak zenbat hurbiltzen den ikusteko. Adostasunak 0,8 gainditu ohi du lau txandatan." },
+      { sel: "short", t: "Hautaketa anitza", x: "Azken dastaketarako, AAk maparen laurden bakoitzeko hautagairik onena aukeratzen du; horrela, hautaketak klasikoa eta berritzailea, arina eta astuna gordetzen ditu." },
+      { t: "Zure eginkizuna pilotuan", x: "Sukaldariei eskatuko dieguna:", list: ["Aurretik: gaia, baimendutako osagaiak eta teknikak eta maparen bi dimentsioak aukeratzea.", "Txanda bakoitzean: 6-8 hautagai onartzea, sukaldatzea eta binaka dastatzea.", "Amaieran: azken hautaketa baloratzea eta prozesuaz zer iruditu zaizun esatea.", "Ezer ez da sukaldatzen sukaldari baten onespenik gabe."] },
+    ] },
+    eyebrow: "GOe Tech Centerrentzako demoa · IES Xabier Zubiri-Manteo", h1: "Pintxoen mapa",
+    lede: "AAk pintxo posibleen mapa bat marrazten du, klasikotik berritzailera eta arinetik astunera, eta eskualde bakoitzeko hautagairik onena gordetzen du. Dastaketa-panel batek bikoteak alderatzen ditu, eta ereduak panelaren gustua ikasten du eta hurrengo bikoterik informatiboena aukeratzen du.",
+    mapTitle: "Hautagaien mapa", legend: "Aurreikusitako erakarpena", yLight: "Arina, freskoa", yRich: "Astuna", xClassic: "Klasikoa", xNovel: "Berritzailea",
+    tasteoff: "Dastaketa-lehia", toLead: "Zu zara panela: zein jango zenuke nahiago? Edo utzi gustu ezkutua duen panel simulatu bati dastaketa-txandak egiten.",
+    skip: "Berdinketa", sim: "Dastaketa-txanda simulatua", reset: "Berriro hasi",
+    learned: "Ereduak ikasi duena", showTruth: "Erakutsi panel simulatuaren benetako gustua", agree: "Adostasuna panel simulatuarekin",
+    agreeNote: "Adostasuna ereduaren iragarpenen eta panel simulatuaren benetako lehentasunen arteko heinen korrelazioa da, mapa osoan. Zuk botatzen baduzu, ereduak zure gustua ikasten du.",
+    shortlist: "Hautaketa mapa osoan", shortNote: "Maparen laurden bakoitzeko aurreikusitako hautagairik onena, azken dastaketak bere aniztasuna gorde dezan.",
+    note: "<strong>Demo honi buruz.</strong> Osagaiak, haien zapore-puntuazioak eta oreka-arauak ilustratzaileak dira, eta GOe Tech Centerreko sukaldariek emango luketen ezagutzaren ordez daude. Benetako sisteman, sukaldariek osagai eta teknika bakoitza onartzen dute, hautagai bakoitza balioztatzen dute sukaldatu aurretik eta dastaketa-protokoloa diseinatzen dute.",
+    gridLabel: "Pintxo hautagaien mapa", empty: "Hautagairik ez", pintxo: "Pintxoa", prefer: x => `${x} nahiago dut`,
+    comps: n => `${n} konparaketa`, meta: (b, c) => `Oreka ${b} · ereduaren konfiantza: ${c}`,
+    conf: ["oraindik ez dago dastaketa-daturik", "altua", "ertaina", "baxua"], raw: "gordinik edo onduta", truthTip: "Panel simulatuaren benetako gustua",
+    quads: ["Klasikoa eta arina", "Klasikoa eta astuna", "Berritzailea eta arina", "Berritzailea eta astuna"],
+    feats: ["Oreka", "Berritasuna", "Astuntasuna", "Azidotasuna", "Kurruskaria", "Umamia", "Freskotasuna", "Gozotasuna", "Mina"],
+    why: {
+      acid: (ac, m) => `Osagarriaren azidotasunak (${ac}) osagai nagusiaren astuntasuna (${m}) orekatzen du.`,
+      crunch: src => `Ukitu kurruskariak (${src}) osagai nagusi leunagoarekin kontrastea egiten du.`,
+      umami: (m, smoked) => `Umami ugari: ${m}${smoked ? " eta kea" : ""}.`,
+      fresh: "Freskoa eta arina; dastaketa hasteko aproposa.", gilda: "Gildaren ahaide hurbila, Donostiako pintxo klasikoa.",
+      heavy: "Nahiko astuna; hobe zati txiki batean.", none: "Konbinazio sinplea, kontraste gutxirekin.",
+    },
+  },
+};
+
+// ---------- culinary knowledge (illustrative) ----------
+// t tradition, r richness, a acidity, c crunch, u umami, f freshness, s sweetness, h heat
+const BASES = [
+  { n: { en: "toasted baguette", es: "pan tostado", eu: "ogi txigortua" }, k: { en: "on toasted baguette", es: "sobre pan tostado", eu: "ogi txigortuaren gainean" }, t: .9, r: .3, c: .7 },
+  { n: { en: "potato tortilla", es: "tortilla de patata", eu: "patata-tortilla" }, k: { en: "on a square of tortilla", es: "sobre un taco de tortilla", eu: "tortilla-zati baten gainean" }, t: .8, r: .6, c: .1 },
+  { n: { en: "rice cracker", es: "galleta de arroz", eu: "arroz-galleta" }, k: { en: "on a crisp rice cracker", es: "sobre una galleta de arroz crujiente", eu: "arroz-galleta kurruskari baten gainean" }, t: .1, c: .9 },
+  { n: { en: "endive leaf", es: "hoja de endivia", eu: "endibia-hostoa" }, k: { en: "in an endive leaf", es: "en una hoja de endivia", eu: "endibia-hosto batean" }, t: .3, f: .8, c: .5, a: .1 },
+  { n: { en: "brioche round", es: "brioche", eu: "briochea" }, k: { en: "on brioche", es: "sobre brioche", eu: "brioche baten gainean" }, t: .3, r: .7, s: .3 },
+  { id: "skewer", n: { en: "skewer", es: "banderilla", eu: "makilatxoa" }, k: { en: "on a skewer", es: "en banderilla", eu: "makilatxo batean" }, t: 1 },
+];
+// es.g: gender/number for Spanish agreement; eu.stem/eu.def: Basque noun without and with article; eu.pl: plural
+const MAINS = [
+  { id: "anchovy-vinegar", n: "anchovy in vinegar", sh: { en: "anchovy", es: "boquerón", eu: "bokarta" }, es: { n: "boquerón en vinagre", g: "m" }, eu: { stem: "bokarta ozpinetan", def: "bokarta ozpinetan" }, t: .9, a: .7, u: .4, f: .3, only: ["Raw"] },
+  { id: "anchovy-salted", n: "salted anchovy", sh: { en: "anchovy", es: "anchoa", eu: "antxoa" }, es: { n: "anchoa en salazón", g: "f" }, eu: { stem: "antxoa gazitu", def: "antxoa gazitua" }, t: .9, u: .9, r: .3, only: ["Raw", "Torched"] },
+  { id: "bonito", n: "bonito", sh: { en: "bonito", es: "bonito", eu: "hegaluzea" }, es: { n: "bonito", g: "m" }, eu: { stem: "hegaluze", def: "hegaluzea" }, t: .8, r: .6, u: .6, only: ["Raw", "Grilled", "Confit", "Smoked", "Torched"] },
+  { id: "crab", n: "spider crab", sh: { en: "crab", es: "txangurro", eu: "txangurroa" }, es: { n: "txangurro", g: "m" }, eu: { stem: "txangurro", def: "txangurroa" }, t: .9, r: .5, u: .7, only: ["Grilled", "Tempura", "Torched"] },
+  { id: "mushrooms", n: "wild mushrooms", sh: { en: "mushrooms", es: "setas", eu: "perretxikoak" }, es: { n: "setas silvestres", g: "fp" }, eu: { stem: "basa-perretxiko", def: "basa-perretxikoak", pl: true }, t: .7, u: .8, r: .4, only: ["Grilled", "Confit", "Tempura", "Smoked", "Torched"] },
+  { id: "cheese", n: "Idiazabal cheese", sh: { en: "Idiazabal", es: "Idiazabal", eu: "Idiazabal" }, es: { n: "queso Idiazabal", g: "m" }, eu: { stem: "Idiazabal gazta", def: "Idiazabal gazta" }, t: .9, r: .8, u: .6, only: ["Raw", "Smoked", "Torched"] },
+  { id: "txistorra", n: "txistorra", sh: { en: "txistorra", es: "txistorra", eu: "txistorra" }, es: { n: "txistorra", g: "f" }, eu: { stem: "txistor", def: "txistorra" }, t: .8, r: .9, u: .4, h: .2, only: ["Grilled", "Tempura"] },
+  { id: "cod", n: "salt cod", sh: { en: "salt cod", es: "bacalao", eu: "bakailaoa" }, es: { n: "bacalao", g: "m" }, eu: { stem: "bakailao", def: "bakailaoa" }, t: .9, u: .5, r: .5, only: ["Confit", "Tempura", "Grilled", "Smoked"] },
+  { id: "octopus", n: "octopus", sh: { en: "octopus", es: "pulpo", eu: "olagarroa" }, es: { n: "pulpo", g: "m" }, eu: { stem: "olagarro", def: "olagarroa" }, t: .6, u: .5, r: .3, only: ["Grilled", "Confit", "Smoked", "Torched"] },
+  { id: "beetroot", n: "beetroot", sh: { en: "beetroot", es: "remolacha", eu: "erremolatxa" }, es: { n: "remolacha", g: "f" }, eu: { stem: "erremolatxa", def: "erremolatxa" }, t: .1, f: .6, a: .3, s: .5, only: ["Raw", "Grilled", "Confit", "Smoked", "Tempura"] },
+  { id: "eel", n: "eel", sh: { en: "eel", es: "anguila", eu: "aingira" }, es: { n: "anguila", g: "f" }, eu: { stem: "aingira", def: "aingira" }, t: .4, r: .8, u: .7, only: ["Smoked", "Grilled", "Torched"] },
+];
+const ACCENTS = [
+  { id: "guindilla", n: { en: "guindilla pepper", es: "piparras", eu: "piparrak" }, sh: { en: "guindilla", es: "piparra", eu: "piparra" }, t: 1, a: .6, h: .3, f: .3 },
+  { id: "olive", n: { en: "manzanilla olive", es: "aceituna manzanilla", eu: "manzanilla oliba" }, sh: { en: "olive", es: "aceituna", eu: "oliba" }, t: .9, a: .4, u: .3 },
+  { n: { en: "green apple", es: "manzana verde", eu: "sagar berdea" }, sh: { en: "apple", es: "manzana", eu: "sagarra" }, t: .3, a: .5, f: .55, c: .3, s: .3 },
+  { n: { en: "txakoli gel", es: "gel de txakoli", eu: "txakoli-gelatina" }, sh: { en: "txakoli", es: "txakoli", eu: "txakolia" }, t: .5, a: .8, f: .6 },
+  { n: { en: "quince paste", es: "membrillo", eu: "irasagar-orea" }, sh: { en: "quince", es: "membrillo", eu: "irasagarra" }, t: .7, s: .9, r: .2 },
+  { n: { en: "seaweed", es: "alga", eu: "alga" }, sh: { en: "seaweed", es: "alga", eu: "alga" }, t: .2, u: .7, f: .4 },
+  { n: { en: "red pepper confit", es: "pimiento rojo confitado", eu: "piper gorri konfitatua" }, sh: { en: "red pepper", es: "pimiento", eu: "piperra" }, t: .8, s: .5, r: .3 },
+  { n: { en: "cider reduction", es: "reducción de sidra", eu: "sagardo-erredukzioa" }, sh: { en: "cider", es: "sidra", eu: "sagardoa" }, t: .6, a: .5, s: .4 },
+  { n: { en: "kimchi", es: "kimchi", eu: "kimchia" }, sh: { en: "kimchi", es: "kimchi", eu: "kimchia" }, t: 0, a: .6, h: .5, u: .5 },
+  { n: { en: "pickled shallot", es: "chalota encurtida", eu: "txalota ozpinetan" }, sh: { en: "shallot", es: "chalota", eu: "txalota" }, t: .5, a: .8, c: .2 },
+  { n: { en: "smoked paprika oil", es: "aceite de pimentón ahumado", eu: "piperrauts ketu olioa" }, sh: { en: "paprika", es: "pimentón", eu: "piperrautsa" }, t: .6, r: .3, h: .2 },
+  { n: { en: "toasted hazelnut", es: "avellana tostada", eu: "hur txigortuak" }, sh: { en: "hazelnut", es: "avellana", eu: "hurra" }, t: .5, c: .8, r: .3 },
+];
+const TECHS = [
+  { n: "Raw", t: .8, f: .3 },
+  { n: "Grilled", t: .8, u: .2, c: .1, es: "a la brasa", eu: { adv: "parrillan" }, chip: { en: "grilled", es: "a la brasa", eu: "parrillan" } },
+  { n: "Confit", t: .7, r: .3, es: "en confit", eu: { adj: "konfitatu" }, chip: { en: "confit", es: "en confit", eu: "konfitatua" } },
+  { n: "Tempura", t: .2, c: .5, r: .3, es: "en tempura", eu: { adv: "tenpuran" }, chip: { en: "tempura", es: "en tempura", eu: "tenpuran" } },
+  { n: "Smoked", t: .5, u: .3, es: { m: "ahumado", f: "ahumada", fp: "ahumadas" }, eu: { adj: "ketu" }, chip: { en: "smoked", es: "ahumado", eu: "ketua" } },
+  { n: "Torched", t: .3, u: .1, c: .1, es: "al soplete", eu: { adj: "kiskali" }, chip: { en: "torched", es: "al soplete", eu: "kiskalia" } },
+];
+const KEYS = ["r", "a", "c", "u", "f", "s", "h"];
+const COLS = 6, ROWS = 5;
+
+let L = "en";
+const T = () => UI[L];
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(r) { let u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+const sig = x => 1 / (1 + Math.exp(-x));
+
+// ---------- generate all candidates and fill the map (quality-diversity archive) ----------
+function buildArchive() {
+  const all = [];
+  for (const b of BASES) for (const m of MAINS) for (const ac of ACCENTS) for (const te of TECHS) {
+    if (!m.only.includes(te.n)) continue;
+    if (b.id === "skewer" && te.n === "Tempura") continue;
+    const parts = [[b, .6], [m, 1], [ac, .8], [te, .6]];
+    const v = {};
+    KEYS.forEach(k => v[k] = parts.reduce((s, [p, w]) => s + (p[k] || 0) * w, 0));
+    const trad = (b.t + m.t + ac.t + te.t) / 4;
+    // balance rules: acidity cutting richness, umami, some crunch; penalties for heaviness, excess acid, clashing sweet and heat
+    let q = 0.8 * Math.min(v.a, v.r) + 0.35 * v.u + 0.3 * Math.min(v.c, 0.8) + 0.2 * v.f
+      - 0.6 * Math.max(0, v.r - 1.6) - 0.6 * Math.max(0, v.a - 1.5) - 0.6 * Math.max(0, Math.min(v.s, v.h) - 0.1) - 0.4 * Math.max(0, v.s - 0.9);
+    const gilda = b.id === "skewer" && /anchovy/.test(m.id) && (ac.id === "guindilla" || ac.id === "olive");
+    if (gilda) q += 0.45;
+    all.push({ b, m, ac, te, v, nov: 1 - trad, bal: q, rich: v.r - v.f, gilda });
+  }
+  const mn = k => Math.min(...all.map(d => d[k])), mx = k => Math.max(...all.map(d => d[k]));
+  const n0 = mn("nov"), n1 = mx("nov"), r0 = mn("rich"), r1 = mx("rich"), q0 = mn("bal"), q1 = mx("bal");
+  all.forEach(d => {
+    d.col = Math.min(COLS - 1, Math.floor((d.nov - n0) / (n1 - n0) * COLS));
+    d.row = Math.min(ROWS - 1, Math.floor((d.rich - r0) / (r1 - r0) * ROWS));
+    d.bal = (d.bal - q0) / (q1 - q0);
+  });
+  const raw = d => [d.bal, d.nov, ...KEYS.map(k => d.v[k])];
+  const X = all.map(raw), dim = X[0].length;
+  const mu = Array(dim).fill(0), sd = Array(dim).fill(0);
+  X.forEach(x => x.forEach((v, i) => mu[i] += v / X.length));
+  X.forEach(x => x.forEach((v, i) => sd[i] += (v - mu[i]) ** 2 / X.length));
+  all.forEach((d, j) => d.x = X[j].map((v, i) => (v - mu[i]) / Math.sqrt(sd[i] || 1)));
+  const cells = Array.from({ length: ROWS * COLS }, () => null);
+  all.forEach(d => { const i = d.row * COLS + d.col; if (!cells[i] || d.bal > cells[i].bal) cells[i] = d; });
+  return cells;
+}
+
+// ---------- names in three languages ----------
+function mainName(d) {
+  const m = d.m, te = d.te;
+  if (L === "en") return te.n === "Raw" ? cap(m.n) : `${te.n} ${m.n}`;
+  if (L === "es") {
+    if (te.n === "Raw") return cap(m.es.n);
+    const tp = typeof te.es === "string" ? te.es : te.es[m.es.g];
+    return `${cap(m.es.n)} ${tp}`;
+  }
+  if (te.n === "Raw") return cap(m.eu.def);
+  if (te.eu.adv) return `${cap(m.eu.def)} ${te.eu.adv}`;
+  return `${cap(m.eu.stem)} ${te.eu.adj}${m.eu.pl ? "ak" : "a"}`;
+}
+const mainPlain = d => L === "en" ? d.m.n : L === "es" ? d.m.es.n : d.m.eu.def;
+const dishName = d => `${mainName(d)}, ${d.ac.n[L]}, ${d.b.k[L]}`;
+const shortName = d => `${d.m.sh[L]} · ${d.ac.sh[L]}`;
+
+// ---------- the panel and the model ----------
+const TRUE_W = [1.1, 0.25, -0.7, 0.9, 0.7, 0.45, 0.55, -0.5, -0.25]; // the simulated panel's hidden taste
+let cells, elites, comps, models, pair, selected, rng, history;
+const utilTrue = d => TRUE_W.reduce((s, w, i) => s + w * d.x[i], 0);
+
+function fit(data, seed) {
+  const r = mulberry32(seed), dim = TRUE_W.length;
+  let w = Array.from({ length: dim }, () => gauss(r) * 0.02);
+  if (!data.length) return w;
+  const lam = 0.6, lr = 0.15;
+  for (let it = 0; it < 250; it++) {
+    const g = w.map(v => lam * v / data.length);
+    for (const [A, B, y] of data) {
+      const diff = A.x.map((v, i) => v - B.x[i]);
+      const p = sig(diff.reduce((s, v, i) => s + v * w[i], 0));
+      diff.forEach((v, i) => g[i] -= (y - p) * v / data.length);
+    }
+    w = w.map((v, i) => v - lr * g[i]);
+  }
+  return w;
+}
+function refit() {
+  models = [];
+  for (let k = 0; k < 7; k++) {
+    const r = mulberry32(1000 + k * 7 + comps.length);
+    const boot = comps.length ? comps.map(() => comps[Math.floor(r() * comps.length)]) : [];
+    models.push(fit(k === 0 ? comps : boot, 99 + k));
+  }
+}
+const meanW = () => TRUE_W.map((_, i) => models.reduce((s, w) => s + w[i], 0) / models.length);
+function predict(d) { const us = models.map(w => w.reduce((s, v, i) => s + v * d.x[i], 0)); const m = us.reduce((a, b) => a + b, 0) / us.length; return { m, sd: Math.sqrt(us.reduce((s, u) => s + (u - m) ** 2, 0) / us.length) }; }
+
+function choosePair() {
+  const recent = new Set(history.slice(-4).map(p => p.map(d => d.col + "," + d.row).sort().join("|")));
+  const ms = elites.map(d => predict(d).m), lo = Math.min(...ms), hi = Math.max(...ms);
+  let best = null, bestScore = -Infinity;
+  for (let i = 0; i < elites.length; i++) for (let j = i + 1; j < elites.length; j++) {
+    const A = elites[i], B = elites[j];
+    const key = [A, B].map(d => d.col + "," + d.row).sort().join("|");
+    if (recent.has(key)) continue;
+    const ps = models.map(w => sig(A.x.reduce((s, v, k) => s + (v - B.x[k]) * w[k], 0)));
+    const pm = ps.reduce((a, b) => a + b, 0) / ps.length;
+    const dis = Math.sqrt(ps.reduce((s, p) => s + (p - pm) ** 2, 0) / ps.length);
+    const close = 1 - Math.abs(pm - 0.5) * 2;                         // a pair the model cannot yet call
+    const good = hi > lo ? ((ms[i] + ms[j]) / 2 - lo) / (hi - lo) : 0.5; // worth cooking
+    const spread = (Math.abs(A.col - B.col) + Math.abs(A.row - B.row)) / (COLS + ROWS);
+    const score = comps.length ? 1.6 * dis + 0.5 * close + 0.6 * good : spread + rng() * 0.3;
+    if (score > bestScore) { bestScore = score; best = [A, B]; }
+  }
+  return best;
+}
+function vote(winner) {
+  const [A, B] = pair;
+  comps.push([A, B, winner === 0 ? 1 : 0]);
+  history.push(pair); refit(); pair = choosePair(); render();
+}
+function simulatedRound() {
+  for (let k = 0; k < 4; k++) {
+    const [A, B] = pair;
+    comps.push([A, B, rng() < sig((utilTrue(A) - utilTrue(B)) * 1.5) ? 1 : 0]);
+    history.push(pair); refit(); pair = choosePair();
+  }
+  render();
+}
+function spearman(a, b) {
+  const rank = arr => { const idx = arr.map((v, i) => [v, i]).sort((x, y) => x[0] - y[0]); const r = Array(arr.length); idx.forEach(([, i], k) => r[i] = k); return r; };
+  const ra = rank(a), rb = rank(b), n = a.length;
+  return 1 - 6 * ra.reduce((s, v, i) => s + (v - rb[i]) ** 2, 0) / (n * (n * n - 1));
+}
+
+// ---------- rendering ----------
+const $ = id => document.getElementById(id);
+function explain(d) {
+  const w = T().why, out = [];
+  if (d.v.a > 0.6 && d.v.r > 0.6) out.push(w.acid(d.ac.n[L], mainPlain(d)));
+  if (d.v.c > 0.6) out.push(w.crunch(d.te.n === "Tempura" ? d.te.chip[L] : d.b.n[L]));
+  if (d.v.u > 1) out.push(w.umami(mainPlain(d), d.te.n === "Smoked"));
+  if (d.v.f > 0.8) out.push(w.fresh);
+  if (d.gilda) out.push(w.gilda);
+  if (d.v.r > 1.5) out.push(w.heavy);
+  if (!out.length) out.push(w.none);
+  return out;
+}
+function confidence(sd) { const c = T().conf; return !comps.length ? c[0] : sd < 0.15 ? c[1] : sd < 0.35 ? c[2] : c[3]; }
+
+function renderDish() {
+  const d = selected, box = $("dish"); box.textContent = "";
+  if (!d) return;
+  const h = document.createElement("h3"); h.textContent = dishName(d);
+  const ul = document.createElement("ul"); ul.className = "parts";
+  [d.te.n === "Raw" ? T().raw : d.te.chip[L], mainPlain(d), d.ac.n[L], d.b.n[L]].forEach(t => { const li = document.createElement("li"); li.textContent = t; ul.append(li); });
+  const why = document.createElement("ul"); why.className = "why";
+  explain(d).forEach(t => { const li = document.createElement("li"); li.textContent = t; why.append(li); });
+  const meta = document.createElement("div"); meta.className = "meta";
+  meta.textContent = T().meta(Math.round(d.bal * 100), confidence(predict(d).sd));
+  box.append(h, ul, why, meta);
+}
+function renderGrid() {
+  const g = $("grid"); g.textContent = ""; g.setAttribute("aria-label", T().gridLabel);
+  const ms = elites.map(d => predict(d).m), lo = Math.min(...ms), hi = Math.max(...ms);
+  for (let row = ROWS - 1; row >= 0; row--) for (let col = 0; col < COLS; col++) {
+    const d = cells[row * COLS + col], el = document.createElement("button");
+    el.className = "cell"; el.setAttribute("role", "gridcell");
+    if (!d) { el.classList.add("empty"); el.disabled = true; el.textContent = "–"; el.setAttribute("aria-label", T().empty); g.append(el); continue; }
+    const v = hi > lo ? (predict(d).m - lo) / (hi - lo) : d.bal;
+    const pct = Math.round(8 + v * 82);
+    el.style.background = `color-mix(in oklab, var(--accent) ${pct}%, var(--surface))`;
+    if (pct > 55) el.classList.add("dark");
+    if (d === selected) el.classList.add("sel");
+    if (pair && pair.includes(d)) el.classList.add("inpair");
+    const n = document.createElement("span"); n.className = "n"; n.textContent = shortName(d);
+    const t = document.createElement("span"); t.className = "tag"; t.textContent = pair && pair[0] === d ? "A" : pair && pair[1] === d ? "B" : "";
+    el.append(n, t);
+    el.setAttribute("aria-label", dishName(d));
+    el.addEventListener("click", () => { selected = d; renderGrid(); renderDish(); });
+    g.append(el);
+  }
+}
+function renderPair() {
+  const box = $("pair"); box.textContent = "";
+  pair.forEach((d, i) => {
+    const x = i ? "B" : "A";
+    const c = document.createElement("div"); c.className = "cand";
+    const who = document.createElement("div"); who.className = "who"; who.textContent = L === "eu" ? `${x} ${T().pintxo}` : `${T().pintxo} ${x}`;
+    const nm = document.createElement("div"); nm.className = "nm"; nm.textContent = dishName(d);
+    const b = document.createElement("button"); b.className = "btn"; b.textContent = T().prefer(x);
+    b.addEventListener("click", () => vote(i));
+    c.append(who, nm, b); box.append(c);
+  });
+  $("roundinfo").textContent = T().comps(comps.length);
+}
+function renderBars() {
+  const w = meanW(), m = Math.max(1, ...w.map(Math.abs), ...(showTruth.checked ? TRUE_W.map(Math.abs) : [0]));
+  const box = $("bars"); box.textContent = "";
+  T().feats.forEach((label, i) => {
+    const row = document.createElement("div"); row.className = "bar";
+    const lab = document.createElement("span"); lab.textContent = label;
+    const tr = document.createElement("div"); tr.className = "track";
+    const fill = document.createElement("div"); fill.className = "fill" + (w[i] < 0 ? " neg" : "");
+    const frac = Math.abs(w[i]) / m * 50;
+    fill.style.left = w[i] < 0 ? `${50 - frac}%` : "50%"; fill.style.width = `${frac}%`;
+    tr.append(fill);
+    if (showTruth.checked) { const t = document.createElement("div"); t.className = "truth"; t.style.left = `${50 + TRUE_W[i] / m * 50}%`; t.title = T().truthTip; tr.append(t); }
+    const val = document.createElement("span"); val.className = "val"; val.textContent = (w[i] >= 0 ? "+" : "−") + Math.abs(w[i]).toFixed(2);
+    row.append(lab, tr, val); box.append(row);
+  });
+  $("agree").textContent = comps.length ? spearman(elites.map(d => predict(d).m), elites.map(utilTrue)).toFixed(2) : "–";
+}
+function renderShort() {
+  const box = $("short"); box.textContent = "";
+  const tests = [d => d.col < COLS / 2 && d.row < ROWS / 2, d => d.col < COLS / 2 && d.row >= ROWS / 2, d => d.col >= COLS / 2 && d.row < ROWS / 2, d => d.col >= COLS / 2 && d.row >= ROWS / 2];
+  tests.forEach((f, qi) => {
+    const pool = elites.filter(f); if (!pool.length) return;
+    const best = pool.reduce((a, b) => (predict(b).m + 0.3 * b.bal > predict(a).m + 0.3 * a.bal ? b : a));
+    const el = document.createElement("div"); el.className = "pick";
+    const w = document.createElement("span"); w.className = "where"; w.textContent = T().quads[qi];
+    const n = document.createElement("span"); n.className = "nm"; n.textContent = dishName(best);
+    el.append(w, n); box.append(el);
+  });
+}
+function renderText() {
+  document.documentElement.lang = L;
+  document.querySelectorAll("[data-i]").forEach(el => el.textContent = T()[el.dataset.i]);
+  document.querySelectorAll("[data-ih]").forEach(el => el.innerHTML = T()[el.dataset.ih]);
+  document.querySelectorAll("[data-lang]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === L)));
+}
+function render() { renderText(); renderGrid(); renderPair(); renderBars(); renderShort(); renderDish(); if (typeof renderTour === "function" && tourIdx >= 0) placeTour(); }
+
+function reset() {
+  comps = []; history = []; rng = mulberry32(2026);
+  refit(); pair = choosePair(); selected = pair[0]; render();
+}
+
+const showTruth = $("showtruth");
+showTruth.addEventListener("change", renderBars);
+$("skip").addEventListener("click", () => { history.push(pair); pair = choosePair(); render(); });
+$("simround").addEventListener("click", simulatedRound);
+$("reset").addEventListener("click", reset);
+document.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", () => {
+  L = b.dataset.lang;
+  try { localStorage.setItem("pintxo-lang", L); } catch (e) {}
+  render();
+  if (tourIdx >= 0) renderTour();
+}));
+
+// ---------- guided tour ----------
+const tour = $("tour");
+let tourIdx = -1;
+function tourTarget(sel) {
+  return { map: $("grid").closest(".card"), dish: $("dish"), pair: $("pair"), learn: $("bars").closest(".card"), sim: $("simround").parentElement, short: $("short").closest(".card") }[sel] || null;
+}
+function placeTour() {
+  if (tourIdx < 0) return;
+  const st = T().tour.steps[tourIdx], target = st.sel ? tourTarget(st.sel) : null;
+  const spot = $("tSpot"), card = $("tCard"), scrim = $("tScrim");
+  if (!target) {
+    spot.hidden = true; scrim.hidden = false;
+    card.style.left = `${Math.max(16, (innerWidth - card.offsetWidth) / 2)}px`;
+    card.style.top = `${Math.max(16, (innerHeight - card.offsetHeight) / 2)}px`;
+    return;
+  }
+  scrim.hidden = true; spot.hidden = false;
+  const r = target.getBoundingClientRect(), pad = 6;
+  Object.assign(spot.style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + 2 * pad}px`, height: `${r.height + 2 * pad}px` });
+  const cw = card.offsetWidth, ch = card.offsetHeight;
+  let top = r.bottom + 16;
+  if (top + ch > innerHeight - 16) top = r.top - ch - 16;
+  if (top < 16) top = Math.max(16, innerHeight - ch - 16);
+  const left = Math.min(Math.max(16, r.left), innerWidth - cw - 16);
+  card.style.left = `${left}px`; card.style.top = `${top}px`;
+}
+function renderTour() {
+  if (tourIdx < 0) return;
+  const tt = T().tour, st = tt.steps[tourIdx], n = tt.steps.length;
+  $("tStep").textContent = tt.step(tourIdx + 1, n);
+  $("tTitle").textContent = st.t;
+  $("tText").textContent = st.x;
+  const ul = $("tList"); ul.textContent = ""; ul.hidden = !st.list;
+  (st.list || []).forEach(x => { const li = document.createElement("li"); li.textContent = x; ul.append(li); });
+  $("tBack").textContent = tt.back; $("tBack").hidden = tourIdx === 0;
+  $("tSkip").textContent = tt.skip; $("tSkip").hidden = tourIdx === n - 1;
+  $("tNext").textContent = tourIdx === n - 1 ? tt.done : tt.next;
+  const dots = $("tDots"); dots.textContent = "";
+  for (let i = 0; i < n; i++) { const d = document.createElement("i"); if (i === tourIdx) d.className = "on"; dots.append(d); }
+  const target = st.sel ? tourTarget(st.sel) : null;
+  if (target) target.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  placeTour();
+  setTimeout(placeTour, 350);
+}
+function openTour() { tour.hidden = false; tourIdx = 0; renderTour(); $("tCard").focus(); hideWelcome(); }
+function closeTour() { tour.hidden = true; tourIdx = -1; $("guideBtn").focus(); }
+function hideWelcome() { $("welcome").hidden = true; try { localStorage.setItem("pintxo-welcome", "hidden"); } catch (e) {} }
+$("tNext").addEventListener("click", () => { if (tourIdx >= T().tour.steps.length - 1) closeTour(); else { tourIdx++; renderTour(); } });
+$("tBack").addEventListener("click", () => { if (tourIdx > 0) { tourIdx--; renderTour(); } });
+$("tSkip").addEventListener("click", closeTour);
+$("guideBtn").addEventListener("click", openTour);
+$("startTour").addEventListener("click", openTour);
+$("hideWelcome").addEventListener("click", hideWelcome);
+addEventListener("resize", placeTour);
+addEventListener("scroll", placeTour, { passive: true });
+document.addEventListener("keydown", e => {
+  if (tourIdx < 0) return;
+  if (e.key === "Escape") closeTour();
+  else if (e.key === "ArrowRight") $("tNext").click();
+  else if (e.key === "ArrowLeft") $("tBack").click();
+});
+try { if (localStorage.getItem("pintxo-welcome") === "hidden") $("welcome").hidden = true; } catch (e) {}
+
+try { const saved = localStorage.getItem("pintxo-lang"); if (saved && UI[saved]) L = saved; } catch (e) {}
+if (!L || L === "en") { const nl = (navigator.language || "").slice(0, 2); if (UI[nl] && nl !== "en") { let saved = null; try { saved = localStorage.getItem("pintxo-lang"); } catch (e) {} if (!saved) L = nl; } }
+
+cells = buildArchive();
+elites = cells.filter(Boolean);
+reset();
+</script>
+</body>
+</html>
