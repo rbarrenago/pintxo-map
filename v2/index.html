@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="Pintxo Map 2.1: an exploratory chef-in-the-loop research demonstrator for culinary diversity and preference learning.">
+  <meta name="theme-color" content="#f5f7f2">
+  <title>Pintxo Map 2.1 · Chef-in-the-Loop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="masthead">
+      <div class="topline">
+        <span class="overline" data-i="overline">An exploratory collaboration proposal · IES Xabier Zubiri-Manteo</span>
+        <div class="toptools"><span class="version">2.1 · Research demo</span><div class="langs" aria-label="Language"><button data-lang="en" aria-pressed="true">EN</button><button data-lang="es">ES</button><button data-lang="eu">EU</button></div></div>
+      </div>
+      <h1>Pintxo Map <span>2.1</span></h1>
+      <p class="lead" data-i="lead">Explore diverse pintxos, let chefs review them, then learn from comparisons. The model proposes; people decide.</p>
+      <div class="status"><span class="dot"></span><span data-i="status">Demonstration only · Illustrative ingredient attributes · No real sensory validation</span></div>
+    </header>
+
+    <section class="steps card slim" aria-label="Workflow"><div><b>01</b><span data-i="step1">Explore</span></div><span class="arrow">→</span><div><b>02</b><span data-i="step2">Chef reviews</span></div><span class="arrow">→</span><div><b>03</b><span data-i="step3">Taste & learn</span></div><span class="arrow">→</span><div><b>04</b><span data-i="step4">Evaluate</span></div></section>
+
+    <div class="layout">
+      <section class="card mapcard" aria-labelledby="mapTitle">
+        <div class="heading"><div><p class="eyebrow" data-i="mapEyebrow">01 / EXPLORATION</p><h2 id="mapTitle" data-i="mapTitle">A map of possibilities</h2></div><span class="tag" id="changedCount">0 changed</span></div>
+        <p class="muted small" data-i="mapIntro">Each cell shows one candidate. Select a square to review the dish.</p>
+        <div class="fieldline"><label><span data-i="horizontal">Horizontal</span><select id="axisX"></select></label><label><span data-i="vertical">Vertical</span><select id="axisY"></select></label></div>
+        <div class="switchline"><label for="archiveView" data-i="mapSelection">Choose candidates by</label><select id="archiveView"><option value="baseline" data-i="baselineView">Fixed balance heuristic</option><option value="adaptive" data-i="adaptiveView">Learning + diversity</option></select></div>
+        <div class="legend"><span class="colorbar" aria-hidden="true"></span><span data-i="legend">Relative model preference (not a taste measurement)</span></div>
+        <div class="mapframe"><div class="yaxis"><span id="yHigh">Rich</span><span id="yLow">Light</span></div><div class="grid" id="grid" role="group" aria-label="Pintxo candidate map"></div><div class="xaxis"><span id="xLow">Classic</span><span id="xHigh">Novel</span></div></div>
+        <p class="micro" id="archiveInfo" aria-live="polite"></p>
+      </section>
+
+      <div class="rightstack">
+        <section class="card" aria-labelledby="chefTitle">
+          <div class="heading"><div><p class="eyebrow" data-i="chefEyebrow">02 / CULINARY JUDGEMENT</p><h2 id="chefTitle" data-i="chefTitle">Chef review</h2></div><span class="tag" id="chefBadge">Pending</span></div>
+          <div id="dish" class="dish" aria-live="polite"></div>
+          <p class="small muted" data-i="chefCaution">Ingredient compatibility is illustrative. A qualified chef must independently assess preparation, allergens and food safety.</p>
+          <label class="review-note"><span data-i="reviewNote">Review note (optional; included in JSON export)</span><input id="reviewNote" type="text" maxlength="250" autocomplete="off" placeholder="" /></label><div class="actions"><button id="approve" class="btn" data-i="approve">Approve for tasting</button><button id="reject" class="btn ghost" data-i="reject">Reject candidate</button></div>
+          <details id="modify"><summary data-i="modify">Suggest a modification</summary><div class="modifygrid"><label><span data-i="mBase">Base</span><select id="modBase"></select></label><label><span data-i="mMain">Main</span><select id="modMain"></select></label><label><span data-i="mAccent">Accent</span><select id="modAccent"></select></label><label><span data-i="mTech">Technique</span><select id="modTech"></select></label></div><button class="btn ghost" id="applyModification" data-i="applyModification">Explore this variation</button><p class="micro" data-i="modifyNote">A suggested variation is not automatically approved. Only catalogued demo combinations are supported.</p></details>
+        </section>
+
+        <section class="card" aria-labelledby="tasteTitle">
+          <div class="heading"><div><p class="eyebrow" data-i="tasteEyebrow">03 / LEARNING</p><h2 id="tasteTitle" data-i="tasteTitle">Taste-off</h2></div><span class="tag" id="voteCount">0 comparisons</span></div>
+          <div class="tabs" role="group" aria-label="Tasting mode"><button id="simMode" class="tab" aria-pressed="true" data-i="simMode">Simulation</button><button id="manualMode" class="tab" aria-pressed="false" data-i="manualMode">Manual tasting</button></div>
+          <div class="modeNotice" id="modeNotice" aria-live="polite"></div>
+          <div class="pair" id="pair"></div>
+          <div class="actions wrapbtn"><button id="tie" class="btn ghost" data-i="tie">Tie / equally preferred</button><button id="skip" class="btn ghost" data-i="skip">Skip</button><button id="runSim" class="btn" data-i="runSim">Simulate four votes</button></div>
+          <div class="smallrow"><label class="check"><input type="checkbox" id="blind" checked><span data-i="blind">Hide recipe names (not a validated blind-tasting protocol)</span></label><button id="resetVotes" class="textbutton" data-i="resetVotes">Reset this mode</button></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="bottomgrid">
+      <section class="card" aria-labelledby="learnTitle">
+        <div class="heading"><div><p class="eyebrow" data-i="learnEyebrow">WHAT THE MODEL LEARNS</p><h2 id="learnTitle" data-i="learnTitle">Estimated preferences</h2></div><span class="tag" id="modelState">No evidence yet</span></div>
+        <p class="small muted" data-i="weightsNote">Associations learned from comparisons, not causal explanations or calibrated confidence estimates.</p>
+        <div id="weights" class="weights"></div>
+        <div id="explanation" class="learningNote"></div>
+      </section>
+      <section class="card" aria-labelledby="shortTitle">
+        <div class="heading"><div><p class="eyebrow" data-i="shortEyebrow">DIVERSE RESULTS</p><h2 id="shortTitle" data-i="shortTitle">A varied shortlist</h2></div></div>
+        <p class="small muted" data-i="shortNote">One candidate from each quadrant. Diversity is maintained; quality is not guaranteed.</p>
+        <div id="shortlist" class="shortlist"></div>
+      </section>
+    </div>
+
+    <section class="card" aria-labelledby="evaluationTitle">
+      <div class="heading"><div><p class="eyebrow" data-i="evalEyebrow">04 / RESEARCH EVALUATION</p><h2 id="evaluationTitle" data-i="evalTitle">Does active learning help?</h2></div><button id="benchmark" class="btn" data-i="benchmark">Run synthetic benchmark</button></div>
+      <p class="small muted" data-i="evalIntro">Repeated synthetic trials compare uncertainty-informed selection against random selection on separate held-out example pairs. This does not validate real human preferences.</p>
+      <div id="benchmarkInfo" class="micro" role="status"></div>
+      <div class="chartwrap"><svg id="chart" role="img" aria-label="Held-out preference accuracy over comparisons" viewBox="0 0 600 215" preserveAspectRatio="xMidYMid meet"></svg></div>
+      <div class="chartkey"><span><i class="activekey"></i><span data-i="activeKey">Active selection</span></span><span><i class="randomkey"></i><span data-i="randomKey">Random baseline</span></span></div>
+    </section>
+
+    <section class="card research" aria-labelledby="researchTitle">
+      <div class="heading"><div><p class="eyebrow" data-i="researchEyebrow">METHODOLOGY & GOVERNANCE</p><h2 id="researchTitle" data-i="researchTitle">About this experiment</h2></div><button id="export" class="btn ghost" data-i="export">Export current mode (JSON)</button></div>
+      <div class="researchcols"><p data-i="research1">The ingredient attributes, rules, simulated panel and initial balance scores are illustrative. Recipe combinations are enumerated from an example catalog; the learning-based archive can change the representative candidate in each map cell.</p><p data-i="research2">Simulation and manual tasting use separate preference histories. Manual comparisons are stored only in this browser session and can be exported without names. No data is sent to a server by this application.</p><p data-i="research3">GOe has not validated or endorsed this demo. Professional sensory protocols, food-safety review, informed consent and secure data management would be prerequisites for an actual research pilot.</p></div>
+      <p class="micro" data-i="researchFoot">Exploratory educational demonstration by IES Xabier Zubiri-Manteo BHI · Proposed for discussion with GOe Tech Center, Basque Culinary Center.</p>
+    </section>
+    <footer><a href="https://github.com/rbarrenago/pintxo-map" target="_blank" rel="noopener noreferrer">GitHub ↗</a><span data-i="footer">Pintxo Map 2.1 · Prototype, not a culinary decision system.</span></footer>
+  </div>
+</body>
+</html>
