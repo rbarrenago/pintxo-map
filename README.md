@@ -1,29 +1,54 @@
-# Pintxo Map
+# Pintxo Map 2.0 — Chef-in-the-Loop
 
-An AI demo that helps chefs invent new pintxos without flattening taste. It proposes a **diverse map** of candidates, from classic to novel and from light to rich, and **learns a tasting panel's preferences** from pairwise comparisons.
+**Status:** exploratory educational research demo, not a validated gastronomic decision system or an endorsed GOe Tech Center project.
 
-Built at IES Xabier Zubiri-Manteo BHI (Donostia-San Sebastián) as a demo for a proposed collaboration with GOe Tech Center, Basque Culinary Center.
+This project illustrates a potential collaboration between IES Xabier Zubiri-Manteo BHI and GOe Tech Center (Basque Culinary Center). A chef can explore a diversity map, inspect candidate recipes, approve/reject them, explore a variation, and compare pairs. An illustrative preference model updates the map's candidate representatives as evidence accumulates.
 
-**Live demo:** https://rbarrenago.github.io/pintxo-map/
+## Features
 
-## What it shows
+- **6 × 5 diversity archive** with configurable dimensions and *Fixed balance heuristic* / *Learning + diversity* views. The latter can replace recipe representatives in the same cells after comparisons; the ingredient combination space remains a finite illustrative enumeration, not an open-ended generator.
+- **Chef review:** approve/reject a candidate, or select another catalogued variation. **Approval in this demo is not an assessment of food safety** and does not replace an expert review.
+- **Two separate modes:** automatic synthetic preferences for demonstrations and manual pairwise input restricted to chef-approved candidates. These never share preference histories. Ties are recorded but are not used by Bradley–Terry fitting; skipped pairs are not votes.
+- **Synthetic research benchmark:** repeated reproducible trials comparing active pair selection with random selection on held-out synthetic pairs. The benchmark does **not** validate human preferences.
+- **Data export:** local-only JSON export of current-mode comparisons and review status. No server-side data collection. Session data disappears on page refresh or closing the tab.
+- **English / Spanish / Basque**, readable methodology notes, uncertainty caveats.
 
-- **Quality-diversity map:** every combination of base, main ingredient, accent and technique is scored, and the best candidate in each cell of a 6 × 5 map is kept, so variety is part of the method.
-- **Chef-chosen dimensions:** the map's two axes can be any of style (novelty, richness), the five basic tastes (sweet, salty, sour, bitter, umami) or five textures (crunchy, creamy, gelatinous, fibrous, airy). Each pintxo shows its taste and texture profile.
-- **Preference learning:** pairwise votes ("which would you rather eat?") train a Bradley–Terry style logistic model. An ensemble of bootstrapped models estimates uncertainty, and the next pair is chosen where the models disagree most.
-- **Simulated panel:** a panel with a hidden taste can vote automatically, so you can see the model's agreement with it rise round by round.
-- **Guided tour for chefs** and a full **English / Spanish / Basque** interface.
+## Run locally
 
-The ingredients, flavour scores and balance rules are illustrative placeholders. In the real pilot, chefs approve every ingredient and technique, validate every candidate before it is cooked, and design the tasting protocol.
+Open `index.html` in your browser, or serve the folder:
 
-## Run it
+```bash
+python3 -m http.server 8000
+```
 
-It is a single static file with no build step: open `index.html` in a browser, or serve the folder with any static server.
+Then open http://localhost:8000/ . No installation or backend is required. Google Fonts optionally loads via the internet; the app still runs with fallback fonts.
 
-## Español
+## Test
 
-Demo de IA que propone un mapa diverso de pintxos y aprende el gusto de un panel de cata a partir de comparaciones por parejas. Incluye una guía para cocineros y la interfaz en inglés, castellano y euskera.
+The Playwright smoke test was used during development. It requires Python's `playwright` package and a Chromium browser:
 
-## Euskara
+```bash
+python3 tests/smoke.py
+```
 
-Pintxoen mapa anitz bat proposatzen duen eta dastaketa-panel baten gustua binakako konparaketetatik ikasten duen AA-demoa. Sukaldarientzako gida bat eta ingelesezko, gaztelaniazko eta euskarazko interfazea ditu.
+The smoke test exercises simulation/manual mode isolation, chef approval, language switching, session export and the benchmark.
+
+## Research limitations
+
+The catalogue, sensory attributes, initial quality heuristic, explanations and simulated evaluator are manually specified examples. Model-disagreement values are not calibrated probabilities. The data and scores must not be used to establish a dish's real taste, quality, safety, allergen status, sustainability or cultural authenticity. Real sensory research requires expert oversight, informed participant consent, well-defined sampling and governance protocols, and appropriate privacy and food-safety procedures.
+
+## Publish on GitHub in a separate branch
+
+From a clone of `https://github.com/rbarrenago/pintxo-map` with write permissions, create and switch to a new branch, then copy the **contents** of this folder to the repository root:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git switch -c pintxo-map-2.0
+# Copy index.html, app.js, styles.css, README.md and tests/ into the repository root.
+git add index.html app.js styles.css README.md tests/
+git commit -m "Build Pintxo Map 2.0 chef-in-the-loop research demo"
+git push -u origin pintxo-map-2.0
+```
+
+Do not merge into `main` before review. For GitHub Pages previewing the branch, choose the new branch in **Settings → Pages** if you wish to switch the published site, or use a branch preview service. The existing `main` GitHub Pages site stays unchanged as long as Pages remains pointed at `main`.
