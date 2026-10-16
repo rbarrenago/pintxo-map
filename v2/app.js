@@ -195,7 +195,7 @@ function candidateName(d){return [localeName(d.t,lang),localeName(d.m,lang),loca
 function fullName(d){return [localeName(d.m,lang),localeName(d.a,lang),localeName(d.b,lang),localeName(d.t,lang)].join(' · ');}
 const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
 const labelBadge=d=>approved.has(d.id)?tr().approved:rejected.has(d.id)?tr().rejected:tr().pending;
-function renderText(){document.documentElement.lang=lang;document.querySelectorAll('[data-i]').forEach(node=>{const k=node.dataset.i;if(typeof tr()[k]==='string')node.textContent=tr()[k];});
+function renderText(){$('guideBtn').firstChild.textContent=GUIDE_COPY[lang].button+' ';document.documentElement.lang=lang;document.querySelectorAll('[data-i]').forEach(node=>{const k=node.dataset.i;if(typeof tr()[k]==='string')node.textContent=tr()[k];});
  document.querySelectorAll('[data-lang]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===lang)));
  $('simMode').setAttribute('aria-pressed',String(mode==='simulation'));$('manualMode').setAttribute('aria-pressed',String(mode==='manual'));
 }
@@ -373,6 +373,117 @@ function renderBenchmark(){const svg=$('chart');svg.replaceChildren();const x0=5
   for(let j=0;j<av.length;j++)svg.append(svgTag('circle',{cx:x(rows.checkpoints[j]),cy:y(av[j]),r:3.5,fill:color}));
  }
 }
+
+// ---------- Guide for chefs: localized walkthrough, independent of experiment state ----------
+const GUIDE_COPY = {"en":{"button":"Guide for chefs","language":"Guide language","step":"Step {n} of {total}","next":"Next","back":"Back","skip":"Close guide","done":"Start exploring","action":"Try it after closing the guide:","duration":"A 5-minute walkthrough. Allow around 10 minutes to try everything.","steps":[{"title":"Welcome to Pintxo Map 2.1","text":"This experimental tool maps different pintxo ideas. It learns from comparisons, but the chef makes every culinary decision. All ingredient attributes and simulated results are illustrative, not validated sensory evidence.","tips":["Select English, Español or Euskara at the top of the app or in this guide.","This walkthrough explains the tools; it does not approve recipes or record votes for you."]},{"target":"map","title":"1 · Explore the map","text":"Each square represents a pintxo candidate. Click a square to inspect the base, main ingredient, accent, technique and flavour profile. Change the horizontal and vertical axes to explore novelty, richness, acidity, crunch and other characteristics.","tips":["Try a familiar combination and a surprising one.","Ask yourself: Would I actually prepare either of these?"]},{"target":"chef","title":"2 · Act as the chef","text":"In Chef review, approve promising candidates or reject combinations that do not make culinary sense. Add an optional review note. Suggest a modification to explore another catalogued combination; a variation is never approved automatically.","tips":["Approve at least two different candidates to enable manual comparisons.","Chef approval here is not a food-safety check: allergens and preparation still need professional assessment."]},{"target":"taste","title":"3 · Try the simulated panel","text":"In Taste-off, select Simulation and press “Simulate four votes” a few times. The artificial panel follows hidden, predefined preferences. Notice how estimated preferences and the varied shortlist respond.","tips":["Simulation votes and manual votes stay in separate histories.","Synthetic results are not evidence of real people enjoying these recipes."]},{"target":"taste","title":"4 · Compare approved pintxos","text":"Switch to Manual tasting after approving at least two candidates. The app presents two options, A and B. For a screen-only evaluation, uncheck “Hide recipe names” so you can read the combinations, then choose one, record a tie or skip.","tips":["On-screen choices express which recipe you would explore—not the taste of a cooked dish.","A real sensory pilot would require actual cooking, appropriate blinding and a professional tasting protocol."]},{"target":"map","title":"5 · See the map evolve","text":"Under “Select candidates by”, compare “Fixed balance heuristic” with “Learning + diversity”. The first uses predefined balance rules; the second may replace the candidate in a cell as preference evidence accumulates.","tips":["Switch back and forth after several comparisons.","Look for useful diversity, not just a single supposedly perfect recipe."]},{"target":"results","title":"6 · Read the results","text":"“Estimated preferences” shows tentative associations learned from comparisons. “A varied shortlist” retains proposals from different areas of the map. Neither is proof that a combination is delicious or practically viable.","tips":["Which suggestions would merit a kitchen trial?","Do the explanations make culinary sense?"]},{"target":"benchmark","title":"7 · Explore research evaluation","text":"“Run synthetic benchmark” compares the app’s active pair selection with random selection on held-out simulated pair comparisons. The graph is a software-method demonstration—not a test of real diners or chefs.","tips":["An advanced algorithm is not automatically better than random selection.","You can skip this step if your main interest is culinary creativity."]},{"target":"export","title":"8 · Save your session","text":"Under “About this experiment”, use “Export current mode (JSON)” to download the current mode’s comparisons and chef-review history. The app has no server storage: your session is lost when you refresh or close the page.","tips":["Export before leaving if you want to share your choices.","Avoid entering people’s names, health details or other personal information in review notes."]},{"title":"9 · Tell us what you think","text":"Your professional judgement is more important than the current scores. After trying the app, please send us brief answers to these five questions:","tips":["Which proposed pintxo would you actually prepare?","Which combinations seem unrealistic or incompatible?","Do the flavour and texture dimensions make sense to you?","Would this be useful for developing new dishes in a professional kitchen?","What ONE feature would you change or add?"]}]},"es":{"button":"Guía para chefs","language":"Idioma de la guía","step":"Paso {n} de {total}","next":"Siguiente","back":"Atrás","skip":"Cerrar guía","done":"Empezar a explorar","action":"Pruébalo cuando cierres la guía:","duration":"Recorrido guiado de 5 minutos. Reserva unos 10 minutos para probarlo todo.","steps":[{"title":"Bienvenido a Pintxo Map 2.1","text":"Esta herramienta experimental muestra diferentes ideas de pintxos en un mapa. Aprende de las comparaciones, pero las decisiones culinarias corresponden al chef. Los atributos de los ingredientes y los resultados simulados son ilustrativos, no datos sensoriales validados.","tips":["Elige English, Español o Euskara en la aplicación o en esta guía.","El recorrido explica las herramientas: no aprueba recetas ni registra votos por ti."]},{"target":"map","title":"1 · Explora el mapa","text":"Cada casilla representa un pintxo candidato. Haz clic para examinar la base, el ingrediente principal, el acompañamiento, la técnica y el perfil de sabor. Cambia los ejes horizontal y vertical para explorar novedad, contundencia, acidez, textura crujiente y otras características.","tips":["Prueba una combinación conocida y otra sorprendente.","Pregúntate: ¿prepararía alguno de estos pintxos?"]},{"target":"chef","title":"2 · Decide como chef","text":"En «Revisión del chef», aprueba los candidatos prometedores o rechaza combinaciones que no tengan sentido culinario. Puedes añadir una nota. «Sugerir una modificación» permite explorar otra combinación del catálogo, pero nunca se aprueba automáticamente.","tips":["Aprueba al menos dos candidatos distintos para poder compararlos manualmente.","Esta aprobación no acredita la seguridad alimentaria: hay que revisar alérgenos y elaboración."]},{"target":"taste","title":"3 · Prueba el panel simulado","text":"En «Duelo de cata», selecciona «Simulación» y pulsa «Simular cuatro votos» varias veces. El panel artificial sigue unas preferencias ocultas y predefinidas. Observa cómo cambian las preferencias estimadas y la selección variada.","tips":["Las votaciones simuladas y las manuales se guardan en historiales separados.","Los resultados sintéticos no demuestran que los platos gusten a personas reales."]},{"target":"taste","title":"4 · Compara pintxos aprobados","text":"Después de aprobar al menos dos candidatos, entra en «Cata manual». Verás dos opciones, A y B. Para evaluarlas solo en pantalla, desmarca «Ocultar nombres de recetas» y lee las combinaciones. Elige una, registra un empate o salta la comparación.","tips":["Elegir una descripción indica cuál explorarías, no a qué sabe un plato cocinado.","Una cata real requiere cocinar los platos y un protocolo sensorial profesional."]},{"target":"map","title":"5 · Observa cómo evoluciona el mapa","text":"En «Seleccionar candidatos mediante», compara «Reglas fijas de equilibrio» con «Aprendizaje + diversidad». El primer modo utiliza reglas predefinidas; el segundo puede sustituir el candidato de una casilla según las preferencias aprendidas.","tips":["Alterna entre ambos modos después de varias comparaciones.","Busca variedad útil, no una supuesta receta perfecta."]},{"target":"results","title":"6 · Interpreta los resultados","text":"«Preferencias estimadas» muestra asociaciones tentativas aprendidas de las comparaciones. «Selección variada» conserva propuestas de distintas zonas del mapa. Ninguna sección demuestra que una combinación resulte deliciosa o viable en cocina.","tips":["¿Qué propuestas merecerían una prueba culinaria?","¿Tienen sentido las explicaciones?"]},{"target":"benchmark","title":"7 · Explora la evaluación","text":"«Ejecutar evaluación sintética» compara la selección activa de parejas con una selección aleatoria usando comparaciones simuladas reservadas para la prueba. El gráfico evalúa un método informático, no los gustos de comensales o chefs reales.","tips":["Un algoritmo avanzado no es necesariamente mejor que elegir al azar.","Puedes omitir este paso si te interesa más la creatividad culinaria."]},{"target":"export","title":"8 · Guarda la sesión","text":"En «Sobre este experimento», usa «Exportar modo actual (JSON)» para descargar las comparaciones y el historial de decisiones del chef. La aplicación no guarda datos en un servidor: al recargar o cerrar la página se pierde la sesión.","tips":["Exporta antes de salir si quieres compartir tus decisiones.","No incluyas nombres, datos de salud ni otra información personal en las notas."]},{"title":"9 · Cuéntanos tu opinión","text":"Tu criterio profesional es más importante que las puntuaciones actuales. Después de probar la aplicación, contesta brevemente estas cinco preguntas:","tips":["¿Qué pintxo propuesto prepararías realmente?","¿Qué combinaciones te parecen poco realistas o incompatibles?","¿Te resultan útiles las dimensiones de sabor y textura?","¿Usarías esta herramienta para desarrollar nuevos platos en una cocina profesional?","¿Qué ÚNICA función cambiarías o añadirías?"]}]},"eu":{"button":"Sukaldarientzako gida","language":"Gidaren hizkuntza","step":"{n}. urratsa / {total}","next":"Hurrengoa","back":"Atzera","skip":"Itxi gida","done":"Hasi esploratzen","action":"Gida itxi ondoren, probatu hau:","duration":"5 minutuko gida. Hartu 10 minutu inguru guztia probatzeko.","steps":[{"title":"Ongi etorri Pintxo Map 2.1era","text":"Tresna esperimental honek pintxo-ideia desberdinak erakusten ditu mapa batean. Konparazioetatik ikasten du, baina sukaldariak hartzen ditu erabaki gastronomikoak. Osagaien ezaugarriak eta simulazioaren emaitzak adibide ilustratiboak dira, ez baliozkotutako dastaketa-datuak.","tips":["Aukeratu English, Español edo Euskara aplikazioan edo gida honetan.","Gidak tresnak azaltzen ditu; ez du errezetarik onartzen edo botorik erregistratzen zure ordez."]},{"target":"map","title":"1 · Arakatu mapa","text":"Lauki bakoitzean pintxo-proposamen bat dago. Egin klik lauki batean oinarria, osagai nagusia, osagarria, teknika eta zapore-profila ikusteko. Aldatu ardatz horizontal eta bertikala berritasuna, astuntasuna, azidotasuna, kurruskari izaera eta beste ezaugarri batzuk aztertzeko.","tips":["Probatu konbinazio ezagun bat eta harrigarri bat.","Galdetu zeure buruari: prestatuko nuke pintxo hau?"]},{"target":"chef","title":"2 · Hartu erabakiak sukaldari gisa","text":"«Sukaldariaren berrikuspena» atalean, onartu interesgarriak diren hautagaiak edo baztertu zentzurik ez duten konbinazioak. Aukeran, idatzi ohar bat. «Aldaketa proposatu» aukerak katalogoko beste konbinazio bat aztertzeko aukera ematen du, baina ez da automatikoki onartzen.","tips":["Onartu gutxienez bi hautagai desberdin eskuz alderatzeko.","Onarpen horrek ez du elikagaien segurtasuna bermatzen: alergenoak eta prestaketa egiaztatu behar dira."]},{"target":"taste","title":"3 · Probatu panel simulatua","text":"«Dastaketa-lehia» atalean, aukeratu «Simulazioa» eta sakatu «Simulatu lau boto» zenbait aldiz. Panel artifizialak aurrez zehaztutako lehentasun ezkutuei jarraitzen die. Begiratu nola aldatzen diren ikasitako lehentasunak eta hautaketa anitza.","tips":["Boto simulatuak eta eskuzkoak historia desberdinetan gordetzen dira.","Emaitza sintetikoek ez dute frogatzen benetako pertsonei platerak gustatzen zaizkienik."]},{"target":"taste","title":"4 · Alderatu onartutako pintxoak","text":"Gutxienez bi hautagai onartu ondoren, joan «Eskuzko dastaketa» aukerara. Bi aukera ikusiko dituzu: A eta B. Pantailako deskribapenak bakarrik aztertzeko, desmarkatu «Ezkutatu errezeten izenak». Aukeratu bat, adierazi berdinketa edo saltatu konparazioa.","tips":["Deskribapen bat aukeratzeak zer probatuko zenukeen adierazten du, ez prestatutako plateraren zaporea.","Benetako dastaketa baterako, platerak prestatu eta protokolo sentsorial profesional bat behar dira."]},{"target":"map","title":"5 · Ikusi maparen bilakaera","text":"«Hautagaiak hautatzeko modua» atalean, alderatu «Oreka-arau finkoak» eta «Ikaskuntza + aniztasuna». Lehenak aurrez ezarritako arauak erabiltzen ditu; bigarrenak lauki bateko proposamena ordezka dezake ikasitako lehentasunen arabera.","tips":["Aldatu modu batetik bestera hainbat konparazio egin ondoren.","Bilatu aniztasun erabilgarria, ez ustezko errezeta perfektu bakarra."]},{"target":"results","title":"6 · Interpretatu emaitzak","text":"«Estimaturiko lehentasunak» atalak konparazioetatik ikasitako lotura behin-behinekoak erakusten ditu. «Hautaketa anitza» atalak mapako hainbat eremutako proposamenak gordetzen ditu. Ez batak ez besteak ez du frogatzen konbinazio bat goxoa edo sukaldaritzan bideragarria denik.","tips":["Zein proposamen probatuko zenituzke sukaldean?","Azalpen gastronomikoek zentzurik badute?"]},{"target":"benchmark","title":"7 · Aztertu ebaluazioa","text":"«Exekutatu ebaluazio sintetikoa» aukerak bikoteen hautaketa aktiboa eta ausazko hautaketa alderatzen ditu, probetarako gordetako konparazio simulatuak erabiliz. Grafikoak metodo informatiko bat aztertzen du, ez benetako sukaldarien edo bezeroen gustuak.","tips":["Algoritmo konplexu batek ez du zertan ausazko hautaketa gainditu.","Sukaldaritza-sormena interesatzen bazaizu, urrats hau salta dezakezu."]},{"target":"export","title":"8 · Gorde saioa","text":"«Esperimentuari buruz» atalean, erabili «Esportatu uneko modua (JSON)» konparazioak eta sukaldariaren erabakien historia deskargatzeko. Aplikazioak ez du daturik zerbitzari batean gordetzen: orria freskatzean edo ixtean saioa galduko da.","tips":["Erabakiak partekatu nahi badituzu, esportatu irten aurretik.","Ez idatzi pertsonen izenik, osasun-daturik edo bestelako datu pertsonalik oharretan."]},{"title":"9 · Eman zure iritzia","text":"Zure irizpide profesionala egungo puntuazioak baino garrantzitsuagoa da. Aplikazioa probatu ondoren, erantzun labur bost galdera hauei:","tips":["Zein pintxo-proposamen prestatuko zenuke benetan?","Zein konbinazio iruditzen zaizkizu ez-errealistak edo bateraezinak?","Zaporearen eta ehunduraren dimentsioek zentzurik badute zuretzat?","Tresna erabiliko zenuke sukalde profesional batean plater berriak garatzeko?","Zein funtzio BAKAR aldatuko edo gehituko zenuke?"]}]}};
+let guideIndex = -1;
+let guideReturnFocus = null;
+const GUIDE_TARGETS = {
+ map: '#grid', chef: '#chefTitle', taste: '#tasteTitle', results: '.bottomgrid',
+ benchmark: '#evaluationTitle', export: '#researchTitle'
+};
+function guideTarget(key){
+ if(!key)return null;
+ const node=document.querySelector(GUIDE_TARGETS[key]);
+ return key==='results'?node:node?.closest('.card');
+}
+function placeGuide(){
+ if(guideIndex<0)return;
+ const g=$('guidePanel'),spot=$('guideSpot'),shade=$('guideShade');
+ const step=GUIDE_COPY[lang].steps[guideIndex];
+ const target=guideTarget(step.target);
+ const vw=window.innerWidth,vh=window.innerHeight;
+ if(!target){spot.hidden=true;shade.hidden=false;
+  if(vw>720){g.style.left=Math.max(12,(vw-g.offsetWidth)/2)+'px';g.style.top=Math.max(12,(vh-g.offsetHeight)/2)+'px';g.style.bottom='auto';}
+  return;
+ }
+ if(vw<=720){
+  // Position the highlighted section above the bottom sheet when practical.
+  const r=target.getBoundingClientRect();
+  const reserved=Math.min(vh*.57,g.offsetHeight)+22;
+  if(r.bottom>vh-reserved && r.top>20)window.scrollBy({top:r.top-42,behavior:'instant'});
+ }
+ const r=target.getBoundingClientRect(),pad=5;
+ const left=Math.max(0,r.left-pad),top=Math.max(0,r.top-pad);
+ const right=Math.min(vw,r.right+pad),bottom=Math.min(vh,r.bottom+pad);
+ spot.hidden=false;shade.hidden=true;
+ Object.assign(spot.style,{left:left+'px',top:top+'px',width:Math.max(0,right-left)+'px',height:Math.max(0,bottom-top)+'px'});
+ if(vw<=720)return;
+ const cw=g.offsetWidth,ch=g.offsetHeight;
+ let x=Math.min(Math.max(12,r.left),vw-cw-12),y=r.bottom+14;
+ if(r.right+cw+18<vw-12){x=r.right+18;y=Math.max(12,Math.min(r.top,vh-ch-12));}
+ else if(y+ch>vh-12 && r.top-ch-14>=12){y=r.top-ch-14;}
+ else if(y+ch>vh-12){y=Math.max(12,vh-ch-12);}
+ g.style.left=x+'px';g.style.top=y+'px';g.style.bottom='auto';
+}
+function renderChefGuide(){
+ if(guideIndex<0)return;
+ const cp=GUIDE_COPY[lang],st=cp.steps[guideIndex];
+ $('guideStep').textContent=cp.step.replace('{n}',guideIndex+1).replace('{total}',cp.steps.length);
+ $('guideLangLabel').textContent=cp.language;
+ $('guideLanguage').value=lang;
+ $('guideTitle').textContent=st.title;
+ $('guideText').textContent=st.text;
+ $('guideTipsTitle').textContent=cp.action;
+ const list=$('guideTips');list.replaceChildren();
+ for(const item of st.tips||[])list.append(el('li',null,item));
+ $('guideTipsWrap').hidden=!st.tips?.length;
+ $('guideDuration').textContent=cp.duration;
+ $('guideDuration').hidden=guideIndex!==0;
+ $('guideProgress').firstElementChild.style.width=(100*(guideIndex+1)/cp.steps.length)+'%';
+ $('guideClose').textContent=cp.skip;
+ $('guideBack').textContent=cp.back;$('guideBack').hidden=guideIndex===0;
+ $('guideNext').textContent=guideIndex===cp.steps.length-1?cp.done:cp.next;
+ $('guidePanel').scrollTop=0;
+ const target=guideTarget(st.target);
+ if(target)target.scrollIntoView({block:'center',behavior:'instant'});
+ placeGuide();
+}
+function openChefGuide(){
+ if(guideIndex>=0)return;
+ guideReturnFocus=document.activeElement;
+ guideIndex=0;$('chefTour').hidden=false;
+ renderChefGuide();$('guidePanel').focus();
+}
+function closeChefGuide(){
+ if(guideIndex<0)return;
+ guideIndex=-1;$('chefTour').hidden=true;
+ (guideReturnFocus?.isConnected?guideReturnFocus:$('guideBtn')).focus();
+}
+function moveGuide(delta){
+ if(guideIndex<0)return;
+ const next=guideIndex+delta;
+ if(next>=GUIDE_COPY[lang].steps.length){closeChefGuide();return;}
+ guideIndex=Math.max(0,next);renderChefGuide();$('guidePanel').focus();
+}
+function initChefGuide(){
+ $('guideBtn').addEventListener('click',openChefGuide);
+ $('guideClose').addEventListener('click',closeChefGuide);
+ $('guideBack').addEventListener('click',()=>moveGuide(-1));
+ $('guideNext').addEventListener('click',()=>moveGuide(1));
+ $('guideLanguage').addEventListener('change',ev=>{
+   lang=ev.target.value;render();renderChefGuide();$('guideLanguage').focus();
+ });
+ window.addEventListener('resize',placeGuide);
+ window.addEventListener('scroll',placeGuide,{passive:true});
+ document.addEventListener('keydown',ev=>{
+  if(guideIndex<0)return;
+  if(ev.key==='Escape'){ev.preventDefault();closeChefGuide();return;}
+  if(ev.key==='Tab'){
+   const focusable=[...$('guidePanel').querySelectorAll('button:not([hidden]),select:not([hidden])')].filter(n=>!n.disabled&&n.offsetParent!==null);
+   if(!focusable.length)return;
+   const first=focusable[0],last=focusable.at(-1);
+   if(ev.shiftKey&&(document.activeElement===first||document.activeElement===$('guidePanel'))){ev.preventDefault();last.focus();}
+   else if(!ev.shiftKey&&document.activeElement===last){ev.preventDefault();first.focus();}
+   else if(!ev.shiftKey&&document.activeElement===$('guidePanel')){ev.preventDefault();first.focus();}
+   return;
+  }
+  if(ev.target?.tagName==='SELECT')return;
+  if(ev.key==='ArrowRight'){ev.preventDefault();moveGuide(1);}
+  else if(ev.key==='ArrowLeft'){ev.preventDefault();moveGuide(-1);}
+ });
+}
+
 function attachEvents(){
  document.querySelectorAll('[data-lang]').forEach(button=>button.addEventListener('click',()=>{lang=button.dataset.lang;render();}));
  $('axisX').addEventListener('change',e=>setAxis('x',e.target.value));$('axisY').addEventListener('change',e=>setAxis('y',e.target.value));
@@ -389,7 +500,7 @@ function attachEvents(){
 function init(){try{const local=(navigator.language||'en').toLowerCase().slice(0,2);if(LANG[local])lang=local;}catch(_e){}
  catalog=buildCatalog();byId=new Map(catalog.map(d=>[d.id,d]));initBounds();
  refit(sessions.simulation);refit(sessions.manual);selected=arrange(sessions.simulation,'baseline').find(Boolean);
- attachEvents();setPair();render();
+ attachEvents();initChefGuide();setPair();render();
  window.PintxoDebug={getBenchmark:()=>benchmarkResults?JSON.parse(JSON.stringify(benchmarkResults)):null,getReviewEvents:()=>reviewEvents.map(e=>({...e})),getState:()=>({mode,lang,selected:selected?.id,votes:{simulation:sessions.simulation.votes.length,manual:sessions.manual.votes.length},approved:approved.size,rejected:rejected.size,catalog:catalog.length,changed:arrange(sessions[mode],'adaptive').reduce((n,d,i)=>n+(d?.id!==arrange(sessions[mode],'baseline')[i]?.id),0),benchmark:!!benchmarkResults}),getCandidate:id=>byId.get(id),getSession:kind=>sessions[kind]};
 }
 init();
