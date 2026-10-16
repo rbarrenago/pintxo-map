@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="description" content="Pintxo Map 2.0: an exploratory chef-in-the-loop research demonstrator for culinary diversity and preference learning.">
+  <meta name="description" content="Pintxo Map 2.1: an exploratory chef-in-the-loop research demonstrator for culinary diversity and preference learning.">
   <meta name="theme-color" content="#f5f7f2">
-  <title>Pintxo Map 2.0 · Chef-in-the-Loop</title>
+  <title>Pintxo Map 2.1 · Chef-in-the-Loop</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -17,9 +17,9 @@
     <header class="masthead">
       <div class="topline">
         <span class="overline" data-i="overline">An exploratory collaboration proposal · IES Xabier Zubiri-Manteo</span>
-        <div class="toptools"><span class="version">2.0 · Research demo</span><div class="langs" aria-label="Language"><button data-lang="en" aria-pressed="true">EN</button><button data-lang="es">ES</button><button data-lang="eu">EU</button></div></div>
+        <div class="toptools"><span class="version">2.1 · Research demo</span><div class="langs" aria-label="Language"><button data-lang="en" aria-pressed="true">EN</button><button data-lang="es">ES</button><button data-lang="eu">EU</button></div></div>
       </div>
-      <h1>Pintxo Map <span>2.0</span></h1>
+      <h1>Pintxo Map <span>2.1</span></h1>
       <p class="lead" data-i="lead">Explore diverse pintxos, let chefs review them, then learn from comparisons. The model proposes; people decide.</p>
       <div class="status"><span class="dot"></span><span data-i="status">Demonstration only · Illustrative ingredient attributes · No real sensory validation</span></div>
     </header>
@@ -42,7 +42,7 @@
           <div class="heading"><div><p class="eyebrow" data-i="chefEyebrow">02 / CULINARY JUDGEMENT</p><h2 id="chefTitle" data-i="chefTitle">Chef review</h2></div><span class="tag" id="chefBadge">Pending</span></div>
           <div id="dish" class="dish" aria-live="polite"></div>
           <p class="small muted" data-i="chefCaution">Ingredient compatibility is illustrative. A qualified chef must independently assess preparation, allergens and food safety.</p>
-          <div class="actions"><button id="approve" class="btn" data-i="approve">Approve for tasting</button><button id="reject" class="btn ghost" data-i="reject">Reject candidate</button></div>
+          <label class="review-note"><span data-i="reviewNote">Review note (optional; included in JSON export)</span><input id="reviewNote" type="text" maxlength="250" autocomplete="off" placeholder="" /></label><div class="actions"><button id="approve" class="btn" data-i="approve">Approve for tasting</button><button id="reject" class="btn ghost" data-i="reject">Reject candidate</button></div>
           <details id="modify"><summary data-i="modify">Suggest a modification</summary><div class="modifygrid"><label><span data-i="mBase">Base</span><select id="modBase"></select></label><label><span data-i="mMain">Main</span><select id="modMain"></select></label><label><span data-i="mAccent">Accent</span><select id="modAccent"></select></label><label><span data-i="mTech">Technique</span><select id="modTech"></select></label></div><button class="btn ghost" id="applyModification" data-i="applyModification">Explore this variation</button><p class="micro" data-i="modifyNote">A suggested variation is not automatically approved. Only catalogued demo combinations are supported.</p></details>
         </section>
 
@@ -52,7 +52,7 @@
           <div class="modeNotice" id="modeNotice" aria-live="polite"></div>
           <div class="pair" id="pair"></div>
           <div class="actions wrapbtn"><button id="tie" class="btn ghost" data-i="tie">Tie / equally preferred</button><button id="skip" class="btn ghost" data-i="skip">Skip</button><button id="runSim" class="btn" data-i="runSim">Simulate four votes</button></div>
-          <div class="smallrow"><label class="check"><input type="checkbox" id="blind" checked><span data-i="blind">Use blind sample labels in manual mode</span></label><button id="resetVotes" class="textbutton" data-i="resetVotes">Reset this mode</button></div>
+          <div class="smallrow"><label class="check"><input type="checkbox" id="blind" checked><span data-i="blind">Hide recipe names (not a validated blind-tasting protocol)</span></label><button id="resetVotes" class="textbutton" data-i="resetVotes">Reset this mode</button></div>
         </section>
       </div>
     </div>
@@ -84,7 +84,7 @@
       <div class="researchcols"><p data-i="research1">The ingredient attributes, rules, simulated panel and initial balance scores are illustrative. Recipe combinations are enumerated from an example catalog; the learning-based archive can change the representative candidate in each map cell.</p><p data-i="research2">Simulation and manual tasting use separate preference histories. Manual comparisons are stored only in this browser session and can be exported without names. No data is sent to a server by this application.</p><p data-i="research3">GOe has not validated or endorsed this demo. Professional sensory protocols, food-safety review, informed consent and secure data management would be prerequisites for an actual research pilot.</p></div>
       <p class="micro" data-i="researchFoot">Exploratory educational demonstration by IES Xabier Zubiri-Manteo BHI · Proposed for discussion with GOe Tech Center, Basque Culinary Center.</p>
     </section>
-    <footer><a href="https://github.com/rbarrenago/pintxo-map" target="_blank" rel="noopener noreferrer">GitHub ↗</a><span data-i="footer">Pintxo Map 2.0 · Prototype, not a culinary decision system.</span></footer>
+    <footer><a href="https://github.com/rbarrenago/pintxo-map" target="_blank" rel="noopener noreferrer">GitHub ↗</a><span data-i="footer">Pintxo Map 2.1 · Prototype, not a culinary decision system.</span></footer>
   </div>
 </body>
 </html>

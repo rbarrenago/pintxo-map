@@ -57,7 +57,7 @@ with sync_playwright() as p:
     page.wait_for_function('PintxoDebug.getState().benchmark === true',timeout=60000)
     print('benchmark',page.locator('#benchmarkInfo').inner_text())
     assert page.locator('#chart polyline').count()==2
-    page.screenshot(path='/mnt/data/pintxo-map-2.0-preview.png',full_page=True)
+    page.screenshot(path='/mnt/data/pintxo-map-2.1-smoke-preview.png',full_page=True)
     assert not errors,errors
     browser.close()
 print('PASS')
