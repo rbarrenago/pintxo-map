@@ -17,7 +17,7 @@
     <header class="masthead">
       <div class="topline">
         <span class="overline" data-i="overline">An exploratory collaboration proposal · IES Xabier Zubiri-Manteo</span>
-        <div class="toptools"><span class="version">2.1 · Research demo</span><div class="langs" aria-label="Language"><button data-lang="en" aria-pressed="true">EN</button><button data-lang="es">ES</button><button data-lang="eu">EU</button></div></div>
+        <div class="toptools"><button type="button" id="guideBtn" class="guide-entry">Guide for chefs <span aria-hidden="true">↗</span></button><span class="version">2.1 · Research demo</span><div class="langs" aria-label="Language"><button data-lang="en" aria-pressed="true">EN</button><button data-lang="es">ES</button><button data-lang="eu">EU</button></div></div>
       </div>
       <h1>Pintxo Map <span>2.1</span></h1>
       <p class="lead" data-i="lead">Explore diverse pintxos, let chefs review them, then learn from comparisons. The model proposes; people decide.</p>
@@ -85,6 +85,21 @@
       <p class="micro" data-i="researchFoot">Exploratory educational demonstration by IES Xabier Zubiri-Manteo BHI · Proposed for discussion with GOe Tech Center, Basque Culinary Center.</p>
     </section>
     <footer><a href="https://github.com/rbarrenago/pintxo-map" target="_blank" rel="noopener noreferrer">GitHub ↗</a><span data-i="footer">Pintxo Map 2.1 · Prototype, not a culinary decision system.</span></footer>
+  </div>
+  <!-- Self-contained chef walkthrough; it never records votes or changes recipe approvals. -->
+  <div id="chefTour" class="chef-tour" hidden>
+    <div id="guideShade" class="guide-shade" aria-hidden="true"></div>
+    <div id="guideSpot" class="guide-spot" aria-hidden="true" hidden></div>
+    <div class="guide-shield" aria-hidden="true"></div>
+    <section id="guidePanel" class="guide-panel" role="dialog" aria-modal="true" aria-labelledby="guideTitle" aria-describedby="guideText" tabindex="-1">
+      <div class="guide-top"><span class="guide-overline" id="guideStep"></span><label class="guide-langlabel" for="guideLanguage"><span id="guideLangLabel">Guide language</span><select id="guideLanguage"><option value="en">English</option><option value="es">Español</option><option value="eu">Euskara</option></select></label></div>
+      <div class="guide-progress" id="guideProgress" aria-hidden="true"><span></span></div>
+      <h2 id="guideTitle"></h2>
+      <p id="guideText"></p>
+      <div id="guideTipsWrap"><p class="guide-tips-heading" id="guideTipsTitle"></p><ul id="guideTips"></ul></div>
+      <p class="guide-duration" id="guideDuration"></p>
+      <div class="guide-actions"><button type="button" id="guideClose" class="guide-btn-quiet"></button><span class="guide-grow"></span><button type="button" id="guideBack" class="guide-btn-quiet"></button><button type="button" id="guideNext" class="btn"></button></div>
+    </section>
   </div>
 </body>
 </html>

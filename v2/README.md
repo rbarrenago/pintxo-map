@@ -44,29 +44,23 @@ python3 tests/regression.py
 
 Smoke tests exercise the existing 2.0 flows; regression tests cover benchmarking, A/B order, review-event provenance, versioned export, language switching and 320–1440 px layouts.
 
-## Updating the existing open Pull Request (important)
+## Guide for chefs (English / Spanish / Basque)
 
-**Do not create another branch or PR. Do not merge PR #1 until you have reviewed the corrected version.**
+The **Guide for chefs / Guía para chefs / Sukaldarientzako gida** button at the top starts a ten-screen guided walkthrough of the existing V2.1 application. The guide covers exploring the map, chef review, simulation vs manual tasting, fixed vs adaptive archives, interpreting results, benchmark limitations, JSON export, and five questions for feedback.
 
-1. In VS Code, open your existing local `pintxo-map` repository and run:
+The guide is **read-only**: opening or stepping through it does not approve dishes, change the map, train the model or save votes. Select EN / ES / EU at the top or directly in the guide. Use Next / Back, Escape or Close; keyboard Tab is retained within the dialog. Its highlighted sections are responsive to different screen widths.
 
-   ```bash
-   git switch pintxo-map-2.0
-   git pull --ff-only origin pintxo-map-2.0
-   ```
+## Deployment alongside Pintxo Map V1
 
-2. Download/unzip the `pintxo-map-2.1.zip` package and **copy the contents of its `pintxo-map-2.1/` folder into the root** of your existing repository. Replace `index.html`, `app.js`, `styles.css` and `README.md`; copy the updated `tests/` files and `.gitignore`. Do not copy the enclosing folder as a nested directory. **Do not delete `.git`.**
+This `v2/` folder is designed to live within the existing GitHub Pages repository at the same level as V1's root `index.html`. After publishing the folder under the GitHub Pages `main` branch, V1 stays at `/pintxo-map/` and V2 at `/pintxo-map/v2/`.
 
-3. Start the application locally, try manual approvals and the synthetic benchmark, then run:
+To update only V2, copy this package's **`v2/`** directory into the existing repository, overwrite the existing `v2/` files and keep the root V1 files intact. Commit and push on a branch, review, then merge when ready.
 
-   ```bash
-   git status
-   git add index.html app.js styles.css README.md tests/ .gitignore
-   git commit -m "Fix tasting provenance and benchmark in Pintxo Map 2.1"
-   git push origin pintxo-map-2.0
-   ```
+To check the guide with Python Playwright and Chromium:
 
-4. GitHub **automatically updates your existing PR #1**: https://github.com/rbarrenago/pintxo-map/pull/1 . Review the `Files changed` and `Checks` tabs, then decide when to merge. `main` and the live GitHub Pages site are unchanged until that merge (assuming GitHub Pages publishes from `main`).
+```bash
+python3 tests/guide.py
+```
 
 ## Project ownership and attribution
 
