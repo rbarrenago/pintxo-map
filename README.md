@@ -8,7 +8,8 @@ Built at IES Xabier Zubiri-Manteo BHI (Donostia-San Sebastián) as a demo for a 
 
 ## What it shows
 
-- **Quality-diversity map:** every combination of base, main ingredient, accent and technique is scored, and the best candidate in each cell of a 6 × 5 map (classic ↔ novel, light ↔ rich) is kept, so variety is part of the method.
+- **Quality-diversity map:** every combination of base, main ingredient, accent and technique is scored, and the best candidate in each cell of a 6 × 5 map is kept, so variety is part of the method.
+- **Chef-chosen dimensions:** the map's two axes can be any of style (novelty, richness), the five basic tastes (sweet, salty, sour, bitter, umami) or five textures (crunchy, creamy, gelatinous, fibrous, airy). Each pintxo shows its taste and texture profile.
 - **Preference learning:** pairwise votes ("which would you rather eat?") train a Bradley–Terry style logistic model. An ensemble of bootstrapped models estimates uncertainty, and the next pair is chosen where the models disagree most.
 - **Simulated panel:** a panel with a hidden taste can vote automatically, so you can see the model's agreement with it rise round by round.
 - **Guided tour for chefs** and a full **English / Spanish / Basque** interface.

@@ -76,6 +76,15 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .cell.inpair { box-shadow: inset 0 0 0 2px var(--ink); }
 @media (max-width: 600px) { .cell { min-height: 46px; } .cell .n { display: none; } }
 
+.axes { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
+.axes label { display: inline-flex; align-items: center; gap: 6px; }
+.axes select { font: 500 13px var(--font-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; max-width: 100%; }
+.prof { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(5, auto); grid-auto-flow: column; gap: 4px 18px; margin-top: 2px; }
+@media (max-width: 520px) { .prof { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-flow: row; } }
+.pr { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 8px; align-items: center; font-size: 12.5px; color: var(--muted); }
+.pr .t { position: relative; height: 7px; border-radius: 4px; background: color-mix(in oklab, var(--line) 55%, var(--surface)); }
+.pr .t i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--accent); }
+.proft { font: 600 12px var(--font-body); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 6px 0 0; }
 .dish { display: grid; gap: 6px; }
 .dish h3 { font-family: var(--font-display); font-weight: 400; font-size: 19px; margin: 0; text-wrap: balance; }
 .parts { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
@@ -166,10 +175,14 @@ label.tg { display: inline-flex; gap: 6px; align-items: center; font-size: 13px;
         <h2 id="maptitle" data-i="mapTitle"></h2>
         <span class="legend"><span data-i="legend"></span> <span class="ramp" aria-hidden="true"></span></span>
       </div>
+      <div class="axes">
+        <label for="axisX"><span data-i="axisH"></span> <select id="axisX"></select></label>
+        <label for="axisY"><span data-i="axisV"></span> <select id="axisY"></select></label>
+      </div>
       <div class="mapframe">
-        <div class="yaxis" aria-hidden="true"><span data-i="yLight"></span><span data-i="yRich"></span></div>
+        <div class="yaxis" aria-hidden="true"><span id="yLo"></span><span id="yHi"></span></div>
         <div class="grid" id="grid" role="grid"></div>
-        <div class="xaxis" aria-hidden="true"><span data-i="xClassic"></span><span data-i="xNovel"></span></div>
+        <div class="xaxis" aria-hidden="true"><span id="xLo"></span><span id="xHi"></span></div>
       </div>
       <div class="dish" id="dish" aria-live="polite"></div>
     </section>
@@ -232,11 +245,13 @@ label.tg { display: inline-flex; gap: 6px; align-items: center; font-size: 13px;
 // ---------- interface text ----------
 const UI = {
   en: {
+    axisH: "Across", axisV: "Up", groups: ["Style", "Five tastes", "Textures"], profile: "Taste and texture profile",
+    dims: { nov: "Novelty", rich: "Richness", s: "Sweet", sa: "Salty", a: "Sour", bi: "Bitter", u: "Umami", c: "Crunchy", cr: "Creamy or silky", ge: "Gelatinous", fi: "Fibrous", ai: "Foamy or airy" },
     guideBtn: "Guide for chefs", startTour: "Start the guide", hideWelcome: "Not now",
     welcome: "<b>New here?</b> A three-minute guide shows what you do on this page and what you will do in the real tasting pilot.",
     tour: { step: (n, t) => `Step ${n} of ${t}`, next: "Next", back: "Back", skip: "Skip guide", done: "Start exploring", steps: [
       { t: "Welcome, chef", x: "This short guide shows what you do in Pintxo Map. The AI proposes and learns; you decide what is worth cooking. It takes about three minutes." },
-      { sel: "map", t: "The map of candidates", x: "Each square holds the best candidate the AI found for one style of pintxo: left to right goes from classic to novel, bottom to top from light to rich. The darker the green, the more the model expects the panel to like it." },
+      { sel: "map", t: "The map of candidates", x: "Each square holds the best candidate the AI found for one style of pintxo: left to right goes from classic to novel, bottom to top from light to rich. The darker the green, the more the model expects the panel to like it. Use the two selectors to change the map's dimensions, for example sour × crunchy." },
       { sel: "dish", t: "Open any pintxo", x: "Click a square to see its ingredients, why it might work and how confident the model is. In the real pilot, this is where you veto anything you would not put on a plate." },
       { sel: "pair", t: "The taste-off", x: "Two pintxos, side by side. Choose the one you would rather eat, as in a blind pairwise tasting. If you cannot choose, press \u201cToo close to call\u201d. In the pilot, the panel tastes the real dishes and the votes are recorded here." },
       { sel: "learn", t: "Watch the model learn", x: "After every vote, the model updates its picture of the panel's taste. Green bars are qualities the panel seems to like; red ones, qualities it seems to avoid. Nothing here is fixed in advance." },
@@ -267,11 +282,13 @@ const UI = {
     },
   },
   es: {
+    axisH: "Horizontal", axisV: "Vertical", groups: ["Estilo", "Cinco sabores", "Texturas"], profile: "Perfil de sabor y textura",
+    dims: { nov: "Novedad", rich: "Contundencia", s: "Dulce", sa: "Salado", a: "Ácido", bi: "Amargo", u: "Umami", c: "Crujiente", cr: "Cremoso o sedoso", ge: "Gelatinoso", fi: "Fibroso", ai: "Espumoso o aireado" },
     guideBtn: "Guía para cocineros", startTour: "Empezar la guía", hideWelcome: "Ahora no",
     welcome: "<b>¿Primera vez aquí?</b> Una guía de tres minutos muestra qué haces en esta página y qué harás en el piloto de cata real.",
     tour: { step: (n, t) => `Paso ${n} de ${t}`, next: "Siguiente", back: "Atrás", skip: "Saltar la guía", done: "Empezar a explorar", steps: [
       { t: "Te damos la bienvenida", x: "Esta breve guía muestra qué haces en el Mapa de pintxos. La IA propone y aprende; tú decides qué merece cocinarse. Lleva unos tres minutos." },
-      { sel: "map", t: "El mapa de candidatos", x: "Cada casilla contiene el mejor candidato que ha encontrado la IA para un estilo de pintxo: de izquierda a derecha, de clásico a novedoso; de abajo arriba, de ligero a contundente. Cuanto más intenso es el verde, más espera el modelo que guste al panel." },
+      { sel: "map", t: "El mapa de candidatos", x: "Cada casilla contiene el mejor candidato que ha encontrado la IA para un estilo de pintxo: de izquierda a derecha, de clásico a novedoso; de abajo arriba, de ligero a contundente. Cuanto más intenso es el verde, más espera el modelo que guste al panel. Con los dos selectores puedes cambiar las dimensiones del mapa, por ejemplo ácido × crujiente." },
       { sel: "dish", t: "Abre cualquier pintxo", x: "Pulsa una casilla para ver sus ingredientes, por qué podría funcionar y cuánta confianza tiene el modelo. En el piloto real, aquí es donde vetas lo que nunca pondrías en un plato." },
       { sel: "pair", t: "El duelo de cata", x: "Dos pintxos, uno junto a otro. Elige el que preferirías comer, como en una cata comparativa a ciegas. Si no puedes decidir, pulsa \u00abEmpate\u00bb. En el piloto, el panel cata los platos reales y aquí se registran los votos." },
       { sel: "learn", t: "Mira cómo aprende el modelo", x: "Tras cada voto, el modelo actualiza su idea del gusto del panel. Las barras verdes son cualidades que parecen gustar al panel; las rojas, las que parece evitar. Nada está fijado de antemano." },
@@ -302,11 +319,13 @@ const UI = {
     },
   },
   eu: {
+    axisH: "Horizontala", axisV: "Bertikala", groups: ["Estiloa", "Bost zaporeak", "Ehundurak"], profile: "Zapore- eta ehundura-profila",
+    dims: { nov: "Berritasuna", rich: "Astuntasuna", s: "Gozoa", sa: "Gazia", a: "Garratza", bi: "Mikatza", u: "Umamia", c: "Kurruskaria", cr: "Krematsua edo leuna", ge: "Gelatinatsua", fi: "Zuntzduna", ai: "Apartsua edo harrotua" },
     guideBtn: "Sukaldarientzako gida", startTour: "Hasi gida", hideWelcome: "Orain ez",
     welcome: "<b>Lehen aldia hemen?</b> Hiru minutuko gida batek erakusten du zer egiten duzun orri honetan eta zer egingo duzun benetako dastaketa-pilotuan.",
     tour: { step: (n, t) => `${n}/${t} urratsa`, next: "Hurrengoa", back: "Atzera", skip: "Saltatu gida", done: "Hasi esploratzen", steps: [
       { t: "Ongi etorri", x: "Gida labur honek erakusten du zer egiten duzun Pintxoen mapan. AAk proposatu eta ikasi egiten du; zuk erabakitzen duzu zer merezi duen sukaldatzea. Hiru minutu inguru behar dira." },
-      { sel: "map", t: "Hautagaien mapa", x: "Lauki bakoitzean AAk pintxo-estilo baterako aurkitu duen hautagairik onena dago: ezkerretik eskuinera, klasikotik berritzailera; behetik gora, arinetik astunera. Zenbat eta berde biziagoa, orduan eta gehiago espero du ereduak panelari gustatzea." },
+      { sel: "map", t: "Hautagaien mapa", x: "Lauki bakoitzean AAk pintxo-estilo baterako aurkitu duen hautagairik onena dago: ezkerretik eskuinera, klasikotik berritzailera; behetik gora, arinetik astunera. Zenbat eta berde biziagoa, orduan eta gehiago espero du ereduak panelari gustatzea. Bi hautatzaileekin maparen dimentsioak alda ditzakezu, adibidez garratza × kurruskaria." },
       { sel: "dish", t: "Ireki edozein pintxo", x: "Sakatu lauki bat haren osagaiak, zergatik funtziona dezakeen eta ereduak zenbateko konfiantza duen ikusteko. Benetako pilotuan, hemen baztertzen duzu inoiz platerean jarriko ez zenukeena." },
       { sel: "pair", t: "Dastaketa-lehia", x: "Bi pintxo, bata bestearen ondoan. Aukeratu nahiago zenukeena jan, itsuan egindako dastaketa konparatibo batean bezala. Erabaki ezin baduzu, sakatu \u00abBerdinketa\u00bb. Pilotuan, panelak benetako platerak dastatzen ditu eta botoak hemen erregistratzen dira." },
       { sel: "learn", t: "Ikusi nola ikasten duen ereduak", x: "Boto bakoitzaren ondoren, ereduak panelaren gustuari buruzko irudia eguneratzen du. Barra berdeak panelari gustatzen zaizkion ezaugarriak dira; gorriak, saihesten dituenak. Ezer ez dago aldez aurretik finkatuta." },
@@ -375,7 +394,20 @@ const ACCENTS = [
   { n: { en: "pickled shallot", es: "chalota encurtida", eu: "txalota ozpinetan" }, sh: { en: "shallot", es: "chalota", eu: "txalota" }, t: .5, a: .8, c: .2 },
   { n: { en: "smoked paprika oil", es: "aceite de pimentón ahumado", eu: "piperrauts ketu olioa" }, sh: { en: "paprika", es: "pimentón", eu: "piperrautsa" }, t: .6, r: .3, h: .2 },
   { n: { en: "toasted hazelnut", es: "avellana tostada", eu: "hur txigortuak" }, sh: { en: "hazelnut", es: "avellana", eu: "hurra" }, t: .5, c: .8, r: .3 },
+  { n: { en: "garlic aioli", es: "alioli", eu: "ali-olioa" }, sh: { en: "aioli", es: "alioli", eu: "ali-olioa" }, t: .6, r: .6, u: .1, cr: .9, sa: .2 },
+  { n: { en: "cider foam", es: "espuma de sidra", eu: "sagardo-aparra" }, sh: { en: "cider foam", es: "espuma", eu: "aparra" }, t: .3, a: .4, s: .2, ai: .9 },
 ];
+// extra illustrative profile values: sa salty, bi bitter, cr creamy, ge gelatinous, fi fibrous, ai airy
+const EXTRA = {
+  "toasted baguette": { ai: .3, sa: .1 }, "potato tortilla": { cr: .6, sa: .2 }, "rice cracker": { ai: .4, sa: .2 }, "endive leaf": { bi: .6 }, "brioche round": { cr: .3, ai: .5 },
+  "anchovy-vinegar": { sa: .5, fi: .2, cr: .1 }, "anchovy-salted": { sa: 1, fi: .2 }, "bonito": { sa: .3, fi: .6 }, "crab": { sa: .4, fi: .7 }, "mushrooms": { fi: .5, ge: .2, bi: .1 },
+  "cheese": { sa: .6, cr: .6 }, "txistorra": { sa: .6, fi: .3 }, "cod": { sa: .6, fi: .5, ge: .4 }, "octopus": { sa: .3, ge: .6, fi: .3 }, "beetroot": { cr: .2, bi: .1 }, "eel": { sa: .4, ge: .5, cr: .2 },
+  "guindilla pepper": { sa: .3 }, "manzanilla olive": { sa: .6, bi: .2 }, "txakoli gel": { ge: .8 }, "quince paste": { ge: .5 }, "seaweed": { sa: .5, ge: .2 }, "red pepper confit": { cr: .3, ge: .2 },
+  "cider reduction": { ge: .2 }, "kimchi": { sa: .4, fi: .3 }, "smoked paprika oil": { bi: .2 }, "toasted hazelnut": { bi: .2 },
+  Grilled: { bi: .15 }, Confit: { cr: .3, ge: .1 }, Tempura: { ai: .3 }, Smoked: { bi: .1, sa: .1 }, Torched: { bi: .25 },
+};
+[...BASES, ...ACCENTS].forEach(o => Object.assign(o, EXTRA[o.n.en] || {}));
+MAINS.forEach(o => Object.assign(o, EXTRA[o.id] || {}));
 const TECHS = [
   { n: "Raw", t: .8, f: .3 },
   { n: "Grilled", t: .8, u: .2, c: .1, es: "a la brasa", eu: { adv: "parrillan" }, chip: { en: "grilled", es: "a la brasa", eu: "parrillan" } },
@@ -384,7 +416,13 @@ const TECHS = [
   { n: "Smoked", t: .5, u: .3, es: { m: "ahumado", f: "ahumada", fp: "ahumadas" }, eu: { adj: "ketu" }, chip: { en: "smoked", es: "ahumado", eu: "ketua" } },
   { n: "Torched", t: .3, u: .1, c: .1, es: "al soplete", eu: { adj: "kiskali" }, chip: { en: "torched", es: "al soplete", eu: "kiskalia" } },
 ];
-const KEYS = ["r", "a", "c", "u", "f", "s", "h"];
+TECHS.forEach(o => Object.assign(o, EXTRA[o.n] || {}));
+const KEYS = ["r", "a", "c", "u", "f", "s", "h"];          // features the taste learner uses
+const ALLKEYS = [...KEYS, "sa", "bi", "cr", "ge", "fi", "ai"];
+const DIMS = [["nov", 0], ["rich", 0], ["s", 1], ["sa", 1], ["a", 1], ["bi", 1], ["u", 1], ["c", 2], ["cr", 2], ["ge", 2], ["fi", 2], ["ai", 2]];
+const PROF = ["s", "sa", "a", "bi", "u", "c", "cr", "ge", "fi", "ai"];
+let AX = "nov", AY = "rich", ALL = [], PMAX = {};
+const val = (d, k) => k === "nov" ? d.nov : k === "rich" ? d.rich : d.v[k];
 const COLS = 6, ROWS = 5;
 
 let L = "en";
@@ -396,14 +434,14 @@ function gauss(r) { let u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v
 const sig = x => 1 / (1 + Math.exp(-x));
 
 // ---------- generate all candidates and fill the map (quality-diversity archive) ----------
-function buildArchive() {
+function buildAll() {
   const all = [];
   for (const b of BASES) for (const m of MAINS) for (const ac of ACCENTS) for (const te of TECHS) {
     if (!m.only.includes(te.n)) continue;
     if (b.id === "skewer" && te.n === "Tempura") continue;
     const parts = [[b, .6], [m, 1], [ac, .8], [te, .6]];
     const v = {};
-    KEYS.forEach(k => v[k] = parts.reduce((s, [p, w]) => s + (p[k] || 0) * w, 0));
+    ALLKEYS.forEach(k => v[k] = parts.reduce((s, [p, w]) => s + (p[k] || 0) * w, 0));
     const trad = (b.t + m.t + ac.t + te.t) / 4;
     // balance rules: acidity cutting richness, umami, some crunch; penalties for heaviness, excess acid, clashing sweet and heat
     let q = 0.8 * Math.min(v.a, v.r) + 0.35 * v.u + 0.3 * Math.min(v.c, 0.8) + 0.2 * v.f
@@ -413,21 +451,28 @@ function buildArchive() {
     all.push({ b, m, ac, te, v, nov: 1 - trad, bal: q, rich: v.r - v.f, gilda });
   }
   const mn = k => Math.min(...all.map(d => d[k])), mx = k => Math.max(...all.map(d => d[k]));
-  const n0 = mn("nov"), n1 = mx("nov"), r0 = mn("rich"), r1 = mx("rich"), q0 = mn("bal"), q1 = mx("bal");
-  all.forEach(d => {
-    d.col = Math.min(COLS - 1, Math.floor((d.nov - n0) / (n1 - n0) * COLS));
-    d.row = Math.min(ROWS - 1, Math.floor((d.rich - r0) / (r1 - r0) * ROWS));
-    d.bal = (d.bal - q0) / (q1 - q0);
-  });
+  const q0 = mn("bal"), q1 = mx("bal");
+  all.forEach(d => { d.bal = (d.bal - q0) / (q1 - q0); });
   const raw = d => [d.bal, d.nov, ...KEYS.map(k => d.v[k])];
   const X = all.map(raw), dim = X[0].length;
   const mu = Array(dim).fill(0), sd = Array(dim).fill(0);
   X.forEach(x => x.forEach((v, i) => mu[i] += v / X.length));
   X.forEach(x => x.forEach((v, i) => sd[i] += (v - mu[i]) ** 2 / X.length));
   all.forEach((d, j) => d.x = X[j].map((v, i) => (v - mu[i]) / Math.sqrt(sd[i] || 1)));
-  const cells = Array.from({ length: ROWS * COLS }, () => null);
-  all.forEach(d => { const i = d.row * COLS + d.col; if (!cells[i] || d.bal > cells[i].bal) cells[i] = d; });
-  return cells;
+  PROF.forEach(k => PMAX[k] = Math.max(1e-6, ...all.map(d => d.v[k])));
+  return all;
+}
+// place every candidate on the two chosen dimensions and keep the best one per cell
+function arrange() {
+  const xs = ALL.map(d => val(d, AX)), ys = ALL.map(d => val(d, AY));
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  ALL.forEach((d, i) => {
+    d.col = x1 > x0 ? Math.min(COLS - 1, Math.floor((xs[i] - x0) / (x1 - x0) * COLS)) : 0;
+    d.row = y1 > y0 ? Math.min(ROWS - 1, Math.floor((ys[i] - y0) / (y1 - y0) * ROWS)) : 0;
+  });
+  cells = Array.from({ length: ROWS * COLS }, () => null);
+  ALL.forEach(d => { const i = d.row * COLS + d.col; if (!cells[i] || d.bal > cells[i].bal) cells[i] = d; });
+  elites = cells.filter(Boolean);
 }
 
 // ---------- names in three languages ----------
@@ -540,9 +585,18 @@ function renderDish() {
   [d.te.n === "Raw" ? T().raw : d.te.chip[L], mainPlain(d), d.ac.n[L], d.b.n[L]].forEach(t => { const li = document.createElement("li"); li.textContent = t; ul.append(li); });
   const why = document.createElement("ul"); why.className = "why";
   explain(d).forEach(t => { const li = document.createElement("li"); li.textContent = t; why.append(li); });
+  const pt = document.createElement("p"); pt.className = "proft"; pt.textContent = T().profile;
+  const prof = document.createElement("div"); prof.className = "prof";
+  PROF.forEach(k => {
+    const row = document.createElement("div"); row.className = "pr";
+    const lab = document.createElement("span"); lab.textContent = T().dims[k];
+    const tr = document.createElement("span"); tr.className = "t";
+    const fill = document.createElement("i"); fill.style.width = `${Math.round(100 * d.v[k] / PMAX[k])}%`;
+    tr.append(fill); row.append(lab, tr); prof.append(row);
+  });
   const meta = document.createElement("div"); meta.className = "meta";
   meta.textContent = T().meta(Math.round(d.bal * 100), confidence(predict(d).sd));
-  box.append(h, ul, why, meta);
+  box.append(h, ul, why, pt, prof, meta);
 }
 function renderGrid() {
   const g = $("grid"); g.textContent = ""; g.setAttribute("aria-label", T().gridLabel);
@@ -595,6 +649,31 @@ function renderBars() {
   });
   $("agree").textContent = comps.length ? spearman(elites.map(d => predict(d).m), elites.map(utilTrue)).toFixed(2) : "–";
 }
+function ends(k) {
+  if (k === "nov") return [T().xClassic, T().xNovel];
+  if (k === "rich") return [T().yLight, T().yRich];
+  return [`− ${T().dims[k]}`, `+ ${T().dims[k]}`];
+}
+function renderAxes() {
+  [["axisX", AX], ["axisY", AY]].forEach(([id, cur]) => {
+    const sel = $(id); sel.textContent = "";
+    T().groups.forEach((gname, gi) => {
+      const og = document.createElement("optgroup"); og.label = gname;
+      DIMS.filter(([, g]) => g === gi).forEach(([k]) => { const o = document.createElement("option"); o.value = k; o.textContent = T().dims[k]; og.append(o); });
+      sel.append(og);
+    });
+    sel.value = cur;
+  });
+  const ex = ends(AX), ey = ends(AY);
+  $("xLo").textContent = ex[0]; $("xHi").textContent = ex[1];
+  $("yLo").textContent = ey[0]; $("yHi").textContent = ey[1];
+}
+function setAxes(nx, ny) {
+  AX = nx; AY = ny; arrange();
+  if (!pair || !pair.every(d => elites.includes(d))) pair = choosePair();
+  if (!elites.includes(selected)) selected = pair[0];
+  render();
+}
 function renderShort() {
   const box = $("short"); box.textContent = "";
   const tests = [d => d.col < COLS / 2 && d.row < ROWS / 2, d => d.col < COLS / 2 && d.row >= ROWS / 2, d => d.col >= COLS / 2 && d.row < ROWS / 2, d => d.col >= COLS / 2 && d.row >= ROWS / 2];
@@ -602,7 +681,7 @@ function renderShort() {
     const pool = elites.filter(f); if (!pool.length) return;
     const best = pool.reduce((a, b) => (predict(b).m + 0.3 * b.bal > predict(a).m + 0.3 * a.bal ? b : a));
     const el = document.createElement("div"); el.className = "pick";
-    const w = document.createElement("span"); w.className = "where"; w.textContent = T().quads[qi];
+    const w = document.createElement("span"); w.className = "where"; w.textContent = (AX === "nov" && AY === "rich") ? T().quads[qi] : `${ends(AX)[qi >> 1]} · ${ends(AY)[qi & 1]}`;
     const n = document.createElement("span"); n.className = "nm"; n.textContent = dishName(best);
     el.append(w, n); box.append(el);
   });
@@ -613,7 +692,7 @@ function renderText() {
   document.querySelectorAll("[data-ih]").forEach(el => el.innerHTML = T()[el.dataset.ih]);
   document.querySelectorAll("[data-lang]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === L)));
 }
-function render() { renderText(); renderGrid(); renderPair(); renderBars(); renderShort(); renderDish(); if (typeof renderTour === "function" && tourIdx >= 0) placeTour(); }
+function render() { renderText(); renderAxes(); renderGrid(); renderPair(); renderBars(); renderShort(); renderDish(); if (typeof renderTour === "function" && tourIdx >= 0) placeTour(); }
 
 function reset() {
   comps = []; history = []; rng = mulberry32(2026);
@@ -698,8 +777,10 @@ try { if (localStorage.getItem("pintxo-welcome") === "hidden") $("welcome").hidd
 try { const saved = localStorage.getItem("pintxo-lang"); if (saved && UI[saved]) L = saved; } catch (e) {}
 if (!L || L === "en") { const nl = (navigator.language || "").slice(0, 2); if (UI[nl] && nl !== "en") { let saved = null; try { saved = localStorage.getItem("pintxo-lang"); } catch (e) {} if (!saved) L = nl; } }
 
-cells = buildArchive();
-elites = cells.filter(Boolean);
+ALL = buildAll();
+arrange();
+$("axisX").addEventListener("change", e => { const v = e.target.value; setAxes(v, v === AY ? AX : AY); });
+$("axisY").addEventListener("change", e => { const v = e.target.value; setAxes(v === AX ? AY : AX, v); });
 reset();
 </script>
 </body>
